@@ -11,3 +11,8 @@ Files:
 These are the images to use as actual control / complete candidates.
 Do not use the older `pineapple-final-boot.img` / `pineapple-uefi-fv-8e-style-boot.img` as clean controls:
 those older images were built from the deprecated non-executable shim path.
+
+
+- `pineapple-oem-uefi-pre-handoff-loop.boot.img`
+  based on the `skip-installcfg` path, then patched to `loop` at `0xa700f590`
+  this is a late EL1-stage stop point just before the deeper handoff/load chain continues
