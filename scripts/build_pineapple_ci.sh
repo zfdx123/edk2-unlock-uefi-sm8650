@@ -157,6 +157,15 @@ if [[ -f "${ROOT_DIR}/imgs/uefi.elf" ]]; then
     --output-dir "${OEM_ARTIFACT_DIR}"
 fi
 
+if [[ -f "${ROOT_DIR}/imgs/8e.img" ]]; then
+  python3 "${ROOT_DIR}/scripts/analyze_kernel_shim_layout.py" \
+    --input "${ROOT_DIR}/imgs/8e.img" \
+    --output-dir "${OEM_ARTIFACT_DIR}"
+  rm -f \
+    "${OEM_ARTIFACT_DIR}/8e.kernel.bin" \
+    "${OEM_ARTIFACT_DIR}/8e.kernel.unpacked.bin"
+fi
+
 cp "${UNSIGNED_ABL}" "${ARTIFACT_DIR}/pineapple-unsigned_abl.elf"
 cp "${LINUX_LOADER_EFI}" "${ARTIFACT_DIR}/pineapple-stage1-linuxloader.efi"
 cp "${DUAL_STAGE_LOADER_EFI}" "${ARTIFACT_DIR}/pineapple-stage2-loader.efi"
