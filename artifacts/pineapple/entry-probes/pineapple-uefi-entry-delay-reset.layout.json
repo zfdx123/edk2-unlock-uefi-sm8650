@@ -1,0 +1,8 @@
+{
+  "mode": "jump-payload",
+  "payload_elf": "/workspace/edk2/out/artifacts/entry-probes/uefi-entry-delay-reset.elf",
+  "raw": "pineapple-uefi-entry-delay-reset.raw.bin",
+  "gzip": "pineapple-uefi-entry-delay-reset.raw.bin.gz",
+  "raw_size": 2950272,
+  "gzip_size": 2709318
+}
