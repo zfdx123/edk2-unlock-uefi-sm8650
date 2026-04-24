@@ -27,6 +27,47 @@ STATIC UINT32 BootDeviceType = EFI_MAX_FLASH_TYPE;
 
 STATIC
 VOID
+RenderStageBanner (
+  IN CONST CHAR8  *StageLabel,
+  IN UINT32       BgColor
+  )
+{
+  MENU_MSG_INFO MenuMsg;
+  CHAR8         EmptyMsg[] = "";
+  CHAR8         Title[MAX_MSG_SIZE];
+  CHAR8         Subtitle[MAX_MSG_SIZE];
+  UINT32        FgColor;
+  UINT32        Locations[] = {80, 120, 160, 200, 240, 280};
+  UINTN         Index;
+
+  if (!IsEnableDisplayMenuFlagSupported ()) {
+    return;
+  }
+
+  FgColor = (BgColor == BGR_BLUE || BgColor == BGR_RED) ? BGR_WHITE : BGR_BLACK;
+  DrawMenuInit ();
+
+  for (Index = 0; Index < ARRAY_SIZE (Locations); ++Index) {
+    SetMenuMsgInfo (&MenuMsg, EmptyMsg, COMMON_FACTOR, FgColor, BgColor,
+                    OPTION_ITEM, Locations[Index], NOACTION);
+    DrawMenu (&MenuMsg, NULL);
+  }
+
+  AsciiStrnCpyS (Title, sizeof (Title), "SM8650 DUALSTAGE",
+                 AsciiStrLen ("SM8650 DUALSTAGE"));
+  SetMenuMsgInfo (&MenuMsg, Title, COMMON_FACTOR, FgColor, BgColor,
+                  ALIGN_LEFT, 136, NOACTION);
+  DrawMenu (&MenuMsg, NULL);
+
+  AsciiStrnCpyS (Subtitle, sizeof (Subtitle), (CHAR8 *)StageLabel,
+                 AsciiStrLen (StageLabel));
+  SetMenuMsgInfo (&MenuMsg, Subtitle, COMMON_FACTOR, FgColor, BgColor,
+                  ALIGN_LEFT, 184, NOACTION);
+  DrawMenu (&MenuMsg, NULL);
+}
+
+STATIC
+VOID
 ProbeRebootIf (
   IN UINT32       ProbeId,
   IN CONST CHAR8  *ProbeName
@@ -124,11 +165,13 @@ BootAndroidFromCurrentSlot (VOID)
   if (!GetVmData ()) {
     DEBUG ((EFI_D_ERROR, "DualStageLoader: VM Hyp calls not present\n"));
   }
+  RenderStageBanner ("BOARD INIT", BGR_CYAN);
   ProbeRebootIf (12, "DualStageLoaderAfterBoardInit");
 
   Info.MultiSlotBoot = MultiSlotBoot;
   Info.SilentBootMode = NON_SILENT_MODE;
 
+  RenderStageBanner ("LOAD IMAGE", BGR_YELLOW);
   ProbeRebootIf (13, "DualStageLoaderBeforeLoadImageAndAuth");
   Status = LoadImageAndAuth (&Info, FALSE, FALSE
 #ifndef USE_DUMMY_BCC
@@ -141,6 +184,7 @@ BootAndroidFromCurrentSlot (VOID)
     return Status;
   }
 
+  RenderStageBanner ("BOOT LINUX", BGR_GREEN);
   ProbeRebootIf (14, "DualStageLoaderBeforeBootLinux");
   return BootLinux (&Info);
 }
@@ -166,6 +210,7 @@ DualStageLoaderEntry (IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTabl
   }
 
   StackGuardChkSetup ();
+  RenderStageBanner ("ENTRY", BGR_BLUE);
   ProbeRebootIf (11, "DualStageLoaderEntry");
   Status = BootAndroidFromCurrentSlot ();
 

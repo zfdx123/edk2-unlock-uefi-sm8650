@@ -7,3 +7,6 @@ This directory contains a conservative extraction/repack experiment:
 
 Primary artifact:
 - `pineapple-8e-oem-linuxloader.boot.img`
+
+This repacked image now uses the locally built `LinuxLoader` and `DualStageLoader`
+with stage-color rendering added in their entry/load/boot milestones.

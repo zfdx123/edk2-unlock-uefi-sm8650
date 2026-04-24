@@ -115,6 +115,47 @@ STATIC CONST EFI_GUID mDualStageLoaderFileGuid = DUAL_STAGE_LOADER_FILE_GUID;
 
 STATIC
 VOID
+RenderStageBanner (
+  IN CONST CHAR8  *StageLabel,
+  IN UINT32       BgColor
+  )
+{
+  MENU_MSG_INFO MenuMsg;
+  CHAR8         EmptyMsg[] = "";
+  CHAR8         Title[MAX_MSG_SIZE];
+  CHAR8         Subtitle[MAX_MSG_SIZE];
+  UINT32        FgColor;
+  UINT32        Locations[] = {80, 120, 160, 200, 240, 280};
+  UINTN         Index;
+
+  if (!IsEnableDisplayMenuFlagSupported ()) {
+    return;
+  }
+
+  FgColor = (BgColor == BGR_BLUE || BgColor == BGR_RED) ? BGR_WHITE : BGR_BLACK;
+  DrawMenuInit ();
+
+  for (Index = 0; Index < ARRAY_SIZE (Locations); ++Index) {
+    SetMenuMsgInfo (&MenuMsg, EmptyMsg, COMMON_FACTOR, FgColor, BgColor,
+                    OPTION_ITEM, Locations[Index], NOACTION);
+    DrawMenu (&MenuMsg, NULL);
+  }
+
+  AsciiStrnCpyS (Title, sizeof (Title), "SM8650 LINUXLOADER",
+                 AsciiStrLen ("SM8650 LINUXLOADER"));
+  SetMenuMsgInfo (&MenuMsg, Title, COMMON_FACTOR, FgColor, BgColor,
+                  ALIGN_LEFT, 136, NOACTION);
+  DrawMenu (&MenuMsg, NULL);
+
+  AsciiStrnCpyS (Subtitle, sizeof (Subtitle), (CHAR8 *)StageLabel,
+                 AsciiStrLen (StageLabel));
+  SetMenuMsgInfo (&MenuMsg, Subtitle, COMMON_FACTOR, FgColor, BgColor,
+                  ALIGN_LEFT, 184, NOACTION);
+  DrawMenu (&MenuMsg, NULL);
+}
+
+STATIC
+VOID
 ProbeRebootIf (
   IN UINT32       ProbeId,
   IN CONST CHAR8  *ProbeName
@@ -389,6 +430,7 @@ LinuxLoaderEntry (IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable)
   }
 
   StackGuardChkSetup ();
+  RenderStageBanner ("ENTRY", BGR_BLUE);
   ProbeRebootIf (1, "LinuxLoaderEntry");
 
   BootStatsSetTimeStamp (BS_BL_START);
@@ -530,6 +572,7 @@ flashless_boot:
     DEBUG ((EFI_D_ERROR, "Error finding board information: %r\n", Status));
     return Status;
   }
+  RenderStageBanner ("BOARD INIT", BGR_CYAN);
   ProbeRebootIf (2, "LinuxLoaderAfterBoardInit");
 
   DEBUG ((EFI_D_INFO, "KeyPress:%u, BootReason:%u\n", KeyPressed, BootReason));
@@ -544,6 +587,7 @@ flashless_boot:
       goto fastboot;
   }
   else {
+    RenderStageBanner ("STAGE2 HANDOFF", BGR_ORANGE);
     ProbeRebootIf (3, "LinuxLoaderBeforeEmbeddedStage2");
     if (!BootIntoRecovery && !FlashlessBoot) {
       Status = LaunchEmbeddedSecondStage (ImageHandle);
@@ -563,6 +607,7 @@ flashless_boot:
     Info.BootReasonAlarm = BootReasonAlarm;
     Info.FlashlessBoot = FlashlessBoot;
     Info.SilentBootMode = SilentBootMode;
+    RenderStageBanner ("LOAD IMAGE", BGR_YELLOW);
     ProbeRebootIf (4, "LinuxLoaderBeforeLoadImageAndAuth");
   #if HIBERNATION_SUPPORT_NO_AES
     BootIntoHibernationImage (&Info, &SetRotAndBootStateAndVBH);
@@ -577,11 +622,13 @@ flashless_boot:
       goto fastboot;
     }
 
+    RenderStageBanner ("BOOT LINUX", BGR_GREEN);
     ProbeRebootIf (5, "LinuxLoaderBeforeBootLinux");
     BootLinux (&Info);
   }
 
 fastboot:
+  RenderStageBanner ("FASTBOOT FALLBACK", BGR_RED);
 #ifdef AUTO_VIRT_ABL
   DEBUG ((EFI_D_INFO, "Rebooting the device.\n"));
   RebootDevice (NORMAL_MODE);
