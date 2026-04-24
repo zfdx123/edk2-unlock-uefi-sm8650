@@ -25,6 +25,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--template-boot", required=True, help="Reference 8e Android boot image")
     parser.add_argument("--linuxloader-ffs", required=True, help="Replacement LinuxLoader .ffs")
     parser.add_argument("--dualstage-ffs", help="Optional DualStageLoader .ffs to inject")
+    parser.add_argument("--patched-module-name", help="Optional OEM module display name to patch in-place, e.g. LinuxLoader")
+    parser.add_argument("--patched-module-body", help="Replacement body.bin for the patched OEM module")
     parser.add_argument("--output-prefix", required=True, help="Output prefix without extension")
     return parser.parse_args()
 
@@ -165,6 +167,7 @@ def main() -> int:
     template_boot = pathlib.Path(args.template_boot).resolve()
     linuxloader_ffs = pathlib.Path(args.linuxloader_ffs).resolve()
     dualstage_ffs = pathlib.Path(args.dualstage_ffs).resolve() if args.dualstage_ffs else None
+    patched_module_body = pathlib.Path(args.patched_module_body).resolve() if args.patched_module_body else None
     output_prefix = pathlib.Path(args.output_prefix).resolve()
     output_prefix.parent.mkdir(parents=True, exist_ok=True)
 
@@ -183,6 +186,11 @@ def main() -> int:
         replacement_files: dict[str, bytes] = {
             "LinuxLoader": linuxloader_ffs.read_bytes(),
         }
+        if args.patched_module_name and patched_module_body is not None:
+            module_dir = find_first(volume_image_dir, f"* {args.patched_module_name}")
+            replacement_files[args.patched_module_name] = (
+                (module_dir / "header.bin").read_bytes() + patched_module_body.read_bytes()
+            )
         injected_files: list[tuple[str, bytes]] = []
         if dualstage_ffs is not None:
             injected_files.append(("DualStageLoader", dualstage_ffs.read_bytes()))
