@@ -27,9 +27,15 @@ Interpretation:
 - if `before-dispatch-reset` reboots but `after-dispatch-reset` does not, control enters deeper OEM UEFI logic and hangs before returning
 
 
-Bypass probes:
-- `pineapple-oem-uefi-skip-installcfg.boot.img`
-  patches `0xa700e810` from `blr x3` to `mov x0, #0`, faking EFI_SUCCESS from `InstallConfigurationTable()`
+Post-InstallConfigurationTable() chain probes:
+- `pineapple-oem-uefi-after-call1-reset.boot.img`
+  reset at `0xa700e8ac`, so the first post-bypass helper call returned
 
-- `pineapple-oem-uefi-skip-installcfg-post-reset.boot.img`
-  applies the same bypass, then inserts a reset at `0xa700e8a8` to prove execution continues on the post-InstallConfigurationTable path
+- `pineapple-oem-uefi-after-call2-reset.boot.img`
+  reset at `0xa700e8b0`, so the second helper call returned
+
+- `pineapple-oem-uefi-after-call3-reset.boot.img`
+  reset at `0xa700e8b4`, so the third helper call returned
+
+- `pineapple-oem-uefi-after-call4-reset.boot.img`
+  reset at `0xa700e8b8`, so all four helper calls returned and execution reached the `CurrentEL` check
