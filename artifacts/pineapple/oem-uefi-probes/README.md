@@ -53,3 +53,20 @@ CurrentEL and post-transition probes:
 
 - `pineapple-oem-uefi-after-el-check-reset.boot.img`
   reset at `0xa700e9c4`, so execution passed the second CurrentEL check and its optional branch
+
+
+Post-EL main path probes:
+- `pineapple-oem-uefi-after-common-call-reset.boot.img`
+  reset at `0xa700e9cc`, so the common call at `0xa700e9c8` returned
+
+- `pineapple-oem-uefi-primary-core-reset.boot.img`
+  reset at `0xa700e9f0`, so execution entered the primary-core path after the MPIDR branch
+
+- `pineapple-oem-uefi-after-stack-fill-reset.boot.img`
+  reset at `0xa700ea10`, so the stack/pattern fill loop completed
+
+- `pineapple-oem-uefi-after-alloc-reset.boot.img`
+  reset at `0xa700ea5c`, so the allocation call at `0xa700ea58` returned
+
+- `pineapple-oem-uefi-before-final-call-reset.boot.img`
+  reset at `0xa700ea7c`, so execution reached the final handoff call in this block
