@@ -1,0 +1,30 @@
+{
+  "image_size": 4218880,
+  "fvh_offset": 152,
+  "mz_offset": 2940928,
+  "manifest_offset": 4214784,
+  "entries": [
+    {
+      "name": "qcom_fv",
+      "offset": 112,
+      "size": 2936872
+    },
+    {
+      "name": "stage1_efi",
+      "offset": 2940928,
+      "size": 569344
+    },
+    {
+      "name": "stage2_efi",
+      "offset": 3510272,
+      "size": 450560
+    },
+    {
+      "name": "unsigned_abl",
+      "offset": 3960832,
+      "size": 253952
+    }
+  ],
+  "raw": "pineapple-uefi-fv-8e-style-shim.raw.bin",
+  "gzip": "pineapple-uefi-fv-8e-style-shim.raw.bin.gz"
+}

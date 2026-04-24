@@ -1,0 +1,50 @@
+{
+  "input": "/workspace/edk2/out/artifacts/pineapple-uefi-fv-8e-style-boot.img",
+  "size": 3325952,
+  "header_version": 3,
+  "header_size": 1596,
+  "kernel_size": 3319577,
+  "ramdisk_size": 0,
+  "os_version_raw": 436207988,
+  "reserved": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "signature_size": 0,
+  "kernel_offset": 4096,
+  "kernel_padded_size": 3321856,
+  "bytes_after_kernel": 0,
+  "kernel_blob": "pineapple-uefi-fv-8e-style-boot.kernel.bin",
+  "kernel_signatures": {
+    "elf": null,
+    "fvh": null,
+    "cpio": null,
+    "android": null,
+    "mz": 159954,
+    "arm64_image_magic": null
+  },
+  "gzip_unpacked": {
+    "size": 4218880,
+    "path": "pineapple-uefi-fv-8e-style-boot.kernel.unpacked.bin",
+    "signatures": {
+      "elf": 3960832,
+      "fvh": 192,
+      "cpio": null,
+      "android": 3313213,
+      "mz": 334681,
+      "arm64_image_magic": 56
+    },
+    "u32_words": [
+      335544336,
+      3573751839,
+      0,
+      0,
+      4218880,
+      0,
+      0,
+      0
+    ]
+  }
+}
