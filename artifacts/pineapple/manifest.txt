@@ -11,3 +11,5 @@ primary_uefi=pineapple-stage1-linuxloader.efi
 embedded_stage2_efi=pineapple-stage2-loader.efi
 unsigned_abl=pineapple-unsigned_abl.elf
 oem_manifests_dir=oem
+eight_e_style_boot_img=pineapple-8e-style-boot.img
+eight_e_style_shim=pineapple-8e-style-shim.raw.bin.gz

@@ -158,12 +158,30 @@ if [[ -f "${ROOT_DIR}/imgs/uefi.elf" ]]; then
 fi
 
 if [[ -f "${ROOT_DIR}/imgs/8e.img" ]]; then
+  python3 "${ROOT_DIR}/scripts/build_kernel_shim_payload.py" \
+    --fv "${FV_IMAGE}" \
+    --stage1-efi "${LINUX_LOADER_EFI}" \
+    --stage2-efi "${DUAL_STAGE_LOADER_EFI}" \
+    --unsigned-abl "${UNSIGNED_ABL}" \
+    --output-prefix "${ARTIFACT_DIR}/pineapple-8e-style-shim"
+
+  python3 "${ROOT_DIR}/scripts/repack_8e_style_boot.py" \
+    --template-8e "${ROOT_DIR}/imgs/8e.img" \
+    --kernel-gzip "${ARTIFACT_DIR}/pineapple-8e-style-shim.raw.bin.gz" \
+    --output "${ARTIFACT_DIR}/pineapple-8e-style-boot.img"
+
+  python3 "${ROOT_DIR}/scripts/analyze_kernel_shim_layout.py" \
+    --input "${ARTIFACT_DIR}/pineapple-8e-style-boot.img" \
+    --output-dir "${OEM_ARTIFACT_DIR}"
+
   python3 "${ROOT_DIR}/scripts/analyze_kernel_shim_layout.py" \
     --input "${ROOT_DIR}/imgs/8e.img" \
     --output-dir "${OEM_ARTIFACT_DIR}"
   rm -f \
     "${OEM_ARTIFACT_DIR}/8e.kernel.bin" \
-    "${OEM_ARTIFACT_DIR}/8e.kernel.unpacked.bin"
+    "${OEM_ARTIFACT_DIR}/8e.kernel.unpacked.bin" \
+    "${OEM_ARTIFACT_DIR}/pineapple-8e-style-boot.kernel.bin" \
+    "${OEM_ARTIFACT_DIR}/pineapple-8e-style-boot.kernel.unpacked.bin"
 fi
 
 cp "${UNSIGNED_ABL}" "${ARTIFACT_DIR}/pineapple-unsigned_abl.elf"
@@ -188,4 +206,6 @@ primary_uefi=pineapple-stage1-linuxloader.efi
 embedded_stage2_efi=pineapple-stage2-loader.efi
 unsigned_abl=pineapple-unsigned_abl.elf
 oem_manifests_dir=oem
+eight_e_style_boot_img=pineapple-8e-style-boot.img
+eight_e_style_shim=pineapple-8e-style-shim.raw.bin.gz
 EOF
