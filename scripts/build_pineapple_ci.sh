@@ -20,11 +20,14 @@ pushd "${ROOT_DIR}" >/dev/null
 
 export WORKSPACE="${ROOT_DIR}"
 export PACKAGES_PATH="${ROOT_DIR}"
+export CONF_PATH="${ROOT_DIR}/Conf"
 export BUILD_NATIVE_AARCH64=true
 export CLANG35_BIN="${CLANG35_BIN:-/usr/bin/}"
 export FUSE_LD="${FUSE_LD:-/usr/bin/ld.lld}"
 export MAKEPATH="${MAKEPATH:-/usr/bin/}"
 export ABL_SRC="."
+
+mkdir -p "${CONF_PATH}"
 
 CLANG_MAJOR="$("${CLANG35_BIN}clang" --version | sed -n 's/.*clang version \([0-9][0-9]*\).*/\1/p' | head -n1)"
 if [[ -n "${CLANG_MAJOR}" && "${CLANG_MAJOR}" -ge 17 ]]; then
