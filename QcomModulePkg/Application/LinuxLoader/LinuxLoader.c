@@ -95,6 +95,10 @@
     }                                                                       \
   }
 
+#ifndef PROBE_REBOOT_STAGE_ID
+#define PROBE_REBOOT_STAGE_ID 0
+#endif
+
 #if HIBERNATION_SUPPORT_NO_AES
 VOID BootIntoHibernationImage (BootInfo *Info,
                                BOOLEAN *SetRotAndBootStateAndVBH);
@@ -108,6 +112,22 @@ UINT64 FlashlessBootImageAddr = 0;
 STATIC DeviceInfo DevInfo;
 STATIC UINT32 BootDeviceType = EFI_MAX_FLASH_TYPE;
 STATIC CONST EFI_GUID mDualStageLoaderFileGuid = DUAL_STAGE_LOADER_FILE_GUID;
+
+STATIC
+VOID
+ProbeRebootIf (
+  IN UINT32       ProbeId,
+  IN CONST CHAR8  *ProbeName
+  )
+{
+  if (PROBE_REBOOT_STAGE_ID != ProbeId) {
+    return;
+  }
+
+  DEBUG ((EFI_D_ERROR, "UEFI reboot probe %u hit at %a\n", ProbeId, ProbeName));
+  RebootDevice (NORMAL_MODE);
+  CpuDeadLoop ();
+}
 
 // This function is used to Deactivate MDTP by entering recovery UI
 STATIC EFI_STATUS MdtpDisable (VOID)
@@ -369,6 +389,7 @@ LinuxLoaderEntry (IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable)
   }
 
   StackGuardChkSetup ();
+  ProbeRebootIf (1, "LinuxLoaderEntry");
 
   BootStatsSetTimeStamp (BS_BL_START);
 
@@ -509,6 +530,7 @@ flashless_boot:
     DEBUG ((EFI_D_ERROR, "Error finding board information: %r\n", Status));
     return Status;
   }
+  ProbeRebootIf (2, "LinuxLoaderAfterBoardInit");
 
   DEBUG ((EFI_D_INFO, "KeyPress:%u, BootReason:%u\n", KeyPressed, BootReason));
   DEBUG ((EFI_D_INFO, "Fastboot=%d, Recovery:%d\n",
@@ -522,6 +544,7 @@ flashless_boot:
       goto fastboot;
   }
   else {
+    ProbeRebootIf (3, "LinuxLoaderBeforeEmbeddedStage2");
     if (!BootIntoRecovery && !FlashlessBoot) {
       Status = LaunchEmbeddedSecondStage (ImageHandle);
       if (EFI_ERROR (Status)) {
@@ -540,6 +563,7 @@ flashless_boot:
     Info.BootReasonAlarm = BootReasonAlarm;
     Info.FlashlessBoot = FlashlessBoot;
     Info.SilentBootMode = SilentBootMode;
+    ProbeRebootIf (4, "LinuxLoaderBeforeLoadImageAndAuth");
   #if HIBERNATION_SUPPORT_NO_AES
     BootIntoHibernationImage (&Info, &SetRotAndBootStateAndVBH);
   #endif
@@ -553,6 +577,7 @@ flashless_boot:
       goto fastboot;
     }
 
+    ProbeRebootIf (5, "LinuxLoaderBeforeBootLinux");
     BootLinux (&Info);
   }
 

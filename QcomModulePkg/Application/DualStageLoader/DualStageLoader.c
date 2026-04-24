@@ -16,10 +16,30 @@
 
 #define DEFAULT_STACK_CHK_GUARD 0xc0c0c0c0
 
+#ifndef PROBE_REBOOT_STAGE_ID
+#define PROBE_REBOOT_STAGE_ID 0
+#endif
+
 BccParams_t BccParamsRecvdFromAVB = {{0}};
 STATIC BOOLEAN BootIntoFastboot = FALSE;
 STATIC BOOLEAN BootIntoRecovery = FALSE;
 STATIC UINT32 BootDeviceType = EFI_MAX_FLASH_TYPE;
+
+STATIC
+VOID
+ProbeRebootIf (
+  IN UINT32       ProbeId,
+  IN CONST CHAR8  *ProbeName
+  )
+{
+  if (PROBE_REBOOT_STAGE_ID != ProbeId) {
+    return;
+  }
+
+  DEBUG ((EFI_D_ERROR, "UEFI reboot probe %u hit at %a\n", ProbeId, ProbeName));
+  RebootDevice (NORMAL_MODE);
+  CpuDeadLoop ();
+}
 
 BOOLEAN
 IsABRetryCountUpdateRequired (VOID)
@@ -104,10 +124,12 @@ BootAndroidFromCurrentSlot (VOID)
   if (!GetVmData ()) {
     DEBUG ((EFI_D_ERROR, "DualStageLoader: VM Hyp calls not present\n"));
   }
+  ProbeRebootIf (12, "DualStageLoaderAfterBoardInit");
 
   Info.MultiSlotBoot = MultiSlotBoot;
   Info.SilentBootMode = NON_SILENT_MODE;
 
+  ProbeRebootIf (13, "DualStageLoaderBeforeLoadImageAndAuth");
   Status = LoadImageAndAuth (&Info, FALSE, FALSE
 #ifndef USE_DUMMY_BCC
                              , &BccParamsRecvdFromAVB
@@ -119,6 +141,7 @@ BootAndroidFromCurrentSlot (VOID)
     return Status;
   }
 
+  ProbeRebootIf (14, "DualStageLoaderBeforeBootLinux");
   return BootLinux (&Info);
 }
 
@@ -143,6 +166,7 @@ DualStageLoaderEntry (IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTabl
   }
 
   StackGuardChkSetup ();
+  ProbeRebootIf (11, "DualStageLoaderEntry");
   Status = BootAndroidFromCurrentSlot ();
 
   __stack_chk_guard = DEFAULT_STACK_CHK_GUARD;
