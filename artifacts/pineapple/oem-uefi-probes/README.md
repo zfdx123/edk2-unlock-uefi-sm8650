@@ -39,3 +39,17 @@ Post-InstallConfigurationTable() chain probes:
 
 - `pineapple-oem-uefi-after-call4-reset.boot.img`
   reset at `0xa700e8b8`, so all four helper calls returned and execution reached the `CurrentEL` check
+
+
+CurrentEL and post-transition probes:
+- `pineapple-oem-uefi-el3-setup-reset.boot.img`
+  reset at `0xa700e8d8`, so the EL3 setup branch was taken
+
+- `pineapple-oem-uefi-post-el-transition-reset.boot.img`
+  reset at `0xa700e994`, so execution reached the common post-transition path
+
+- `pineapple-oem-uefi-el2-path-reset.boot.img`
+  reset at `0xa700e9bc`, so the optional EL2-specific path was taken
+
+- `pineapple-oem-uefi-after-el-check-reset.boot.img`
+  reset at `0xa700e9c4`, so execution passed the second CurrentEL check and its optional branch
