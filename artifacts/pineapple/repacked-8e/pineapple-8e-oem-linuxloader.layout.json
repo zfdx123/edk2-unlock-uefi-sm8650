@@ -1,0 +1,11 @@
+{
+  "reference_zip": "/workspace/edk2/imgs/8e.zip",
+  "template_boot": "/workspace/edk2/imgs/8e.img",
+  "linuxloader_ffs": "/workspace/edk2/out/Build/DEBUG_CLANG35/FV/Ffs/f536d559-459f-48fa-8bbc-43b554ecae8dLinuxLoader/f536d559-459f-48fa-8bbc-43b554ecae8d.ffs",
+  "dualstage_ffs": "/workspace/edk2/out/Build/DEBUG_CLANG35/FV/Ffs/a1168d25-1f58-4d2b-ae2e-f2f193b8897cDualStageLoader/a1168d25-1f58-4d2b-ae2e-f2f193b8897c.ffs",
+  "outer_volume": "1 8C8CE578-8A3D-4F1C-9935-896185C32DD3",
+  "inner_volume": "0 631008B0-B2D1-410A-8B49-2C5C4D8ECC7E",
+  "kernel_unpacked_size": 4194416,
+  "kernel_gzip_size": 2821443,
+  "boot_img": "pineapple-8e-oem-linuxloader.boot.img"
+}
