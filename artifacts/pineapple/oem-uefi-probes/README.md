@@ -25,3 +25,11 @@ Interpretation:
 - if `code-entry-reset` does not reboot, the problem is before real OEM UEFI code starts
 - if `code-entry-reset` reboots but `systab-ok-reset` does not, the problem is in the early wrapper / system table validation path
 - if `before-dispatch-reset` reboots but `after-dispatch-reset` does not, control enters deeper OEM UEFI logic and hangs before returning
+
+
+Bypass probes:
+- `pineapple-oem-uefi-skip-installcfg.boot.img`
+  patches `0xa700e810` from `blr x3` to `mov x0, #0`, faking EFI_SUCCESS from `InstallConfigurationTable()`
+
+- `pineapple-oem-uefi-skip-installcfg-post-reset.boot.img`
+  applies the same bypass, then inserts a reset at `0xa700e8a8` to prove execution continues on the post-InstallConfigurationTable path

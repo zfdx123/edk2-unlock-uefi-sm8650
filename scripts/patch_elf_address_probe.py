@@ -11,6 +11,12 @@ import tempfile
 
 
 MODE_TO_ASM = {
+    "success": """
+        .text
+        .global _start
+    _start:
+        mov x0, #0
+    """,
     "loop": """
         .text
         .global _start
