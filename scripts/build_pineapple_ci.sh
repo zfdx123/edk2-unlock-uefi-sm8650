@@ -31,7 +31,9 @@ if [[ -n "${CLANG_MAJOR}" && "${CLANG_MAJOR}" -ge 17 ]]; then
   export CLANG_EXTRA_DLINK_FLAGS="-Wl,--no-relax -Wl,--apply-dynamic-relocs"
 fi
 
+set +u
 . "${ROOT_DIR}/edksetup.sh"
+set -u
 make -C BaseTools
 
 . "${ROOT_DIR}/QcomModulePkg/build.config.msm.${BOARD_NAME}"
