@@ -47,7 +47,7 @@ mkdir -p "${CONF_PATH}"
 
 CLANG_MAJOR="$("${CLANG35_BIN}clang" --version | sed -n 's/.*clang version \([0-9][0-9]*\).*/\1/p' | head -n1)"
 if [[ -n "${CLANG_MAJOR}" && "${CLANG_MAJOR}" -ge 17 ]]; then
-  export CLANG_EXTRA_DLINK_FLAGS="-Wl,--no-relax -Wl,--apply-dynamic-relocs"
+  export CLANG_EXTRA_DLINK_FLAGS="-fPIE -fPIC -Wl,--no-relax -Wl,--apply-dynamic-relocs"
 fi
 
 set +u
