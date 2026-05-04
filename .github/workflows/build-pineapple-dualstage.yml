@@ -25,7 +25,7 @@ on:
         default: ""
   repository_dispatch:
     types:
-      - build-pineapple
+      - build-pineapple-dualstage
 
 jobs:
   build:
@@ -54,7 +54,7 @@ jobs:
         id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r23c
+          ndk-version: r24
           add-to-path: true
 
       - name: Build dual-stage pineapple artifacts (NDK Clang)
