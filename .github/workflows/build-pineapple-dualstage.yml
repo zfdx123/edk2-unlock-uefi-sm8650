@@ -1,4 +1,4 @@
-name: Build Pineapple Dual-Stage UEFI
+name: Build Pineapple Dual-Stage UEFI (NDK Clang)
 
 on:
   push:
@@ -14,7 +14,7 @@ on:
       target_ref:
         description: "Git ref to build"
         required: false
-        default: "uefi.lnx.4.0.r14-rel"
+        default: "main"
       boot_header_version:
         description: "Android boot header version"
         required: false
@@ -25,7 +25,7 @@ on:
         default: ""
   repository_dispatch:
     types:
-      - build-pineapple-dualstage
+      - build-pineapple
 
 jobs:
   build:
@@ -42,26 +42,43 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential \
-            clang \
-            llvm \
-            lld \
+            # 移除系统自带的 clang/llvm 以避免冲突，主要依赖 NDK 工具链
             gcc-aarch64-linux-gnu \
             binutils-aarch64-linux-gnu \
             uuid-dev \
             iasl \
-            python3
+            python3 \
+            wget \
+            unzip
 
-      - name: Build dual-stage pineapple artifacts
+      - name: Setup Android NDK
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27c
+          add-to-path: true
+
+      - name: Build dual-stage pineapple artifacts (NDK Clang)
         env:
           TARGET_REF: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.ref || github.event.inputs.target_ref || github.ref }}
           BOOT_HEADER_VERSION: ${{ github.event.inputs.boot_header_version || '4' }}
           BOOT_CMDLINE: ${{ github.event.inputs.boot_cmdline || github.event.client_payload.boot_cmdline || '' }}
+          # 关键修改：指定使用 NDK 的 Clang 编译器
+          # NDK r26+ 的 Clang 位于 $ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
+          CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang
+          CXX: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++
+          # 确保链接器也使用 NDK 的 lld
+          LD: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/ld.lld
+          # 设置 Android NDK 环境变量供构建脚本使用
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
+          # 验证编译器版本
+          $CC --version
           bash scripts/build_pineapple_ci.sh
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pineapple-dualstage-artifacts
+          name: pineapple-dualstage-artifacts-ndk
           if-no-files-found: error
           path: out/artifacts/*
