@@ -73,7 +73,7 @@ jobs:
         run: |
           # 验证编译器版本
           $CC --version
-          bash scripts/build_pineapple_ci.sh
+          bash scripts/build_our_unlock_poweroff.sh
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
