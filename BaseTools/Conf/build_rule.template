@@ -372,6 +372,7 @@
         $(CP) ${dst} $(DEBUG_DIR)
         $(CP) ${dst} $(BIN_DIR)(+)$(MODULE_NAME_GUID).efi
         -$(CP) $(DEBUG_DIR)(+)*.map $(OUTPUT_DIR)
+        -$(CP) $(DEBUG_DIR)(+)*.map $(BIN_DIR)
         -$(CP) $(DEBUG_DIR)(+)*.pdb $(OUTPUT_DIR) 
     <Command.GCC>
         $(CP) ${src} $(DEBUG_DIR)(+)$(MODULE_NAME).debug
@@ -387,6 +388,7 @@
         $(CP) ${dst} $(DEBUG_DIR)
         $(CP) ${dst} $(BIN_DIR)(+)$(MODULE_NAME_GUID).efi
         -$(CP) $(DEBUG_DIR)(+)*.map $(OUTPUT_DIR)
+        -$(CP) $(DEBUG_DIR)(+)*.map $(BIN_DIR)
         
     <Command.XCODE>
         # tool to convert Mach-O to PE/COFF
@@ -397,6 +399,7 @@
         $(CP) ${dst} $(DEBUG_DIR)
         $(CP) ${dst} $(BIN_DIR)(+)$(MODULE_NAME_GUID).efi
         -$(CP) $(DEBUG_DIR)(+)*.map $(OUTPUT_DIR)
+        -$(CP) $(DEBUG_DIR)(+)*.map $(BIN_DIR)
 
 [Dependency-Expression-File]
     <InputFile>

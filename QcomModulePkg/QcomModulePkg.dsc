@@ -106,11 +106,12 @@
 
 [BuildOptions.common]
   GCC:*_*_*_ARCHCC_FLAGS  = -Wno-shift-negative-value -fstack-protector-all -Wno-varargs -fno-common -Wno-misleading-indentation -Wno-unknown-warning-option
-  GCC:*_*_*_DLINK_FLAGS = -Wl,-Ttext=0x0
   GCC:*_*_*_CC_FLAGS = -DZ_SOLO
   GCC:*_*_*_CC_FLAGS = -DPRODUCT_NAME='"$(BOARD_BOOTLOADER_PRODUCT_NAME)"'
 
-  GCC:*_*_*_DLINK_FLAGS = $(CLANG_EXTRA_DLINK_FLAGS)
+  # Keep EDK2's default AArch64 link recipe, including -Map output, and layer
+  # the local image-base / lld compatibility flags on top for CLANG35 builds.
+  CLANG35:*_*_AARCH64_DLINK_FLAGS == DEF(CLANG35_AARCH64_TARGET) DEF(GCC_AARCH64_DLINK_FLAGS) -z common-page-size=0x1000 -Wl,-Ttext=0x0 $(CLANG_EXTRA_DLINK_FLAGS)
   !ifdef $(TARGET_AUDIO_FRAMEWORK)
   GCC:*_*_*_CC_FLAGS = -DAUDIO_FRAMEWORK='$(TARGET_AUDIO_FRAMEWORK)'
   !endif
