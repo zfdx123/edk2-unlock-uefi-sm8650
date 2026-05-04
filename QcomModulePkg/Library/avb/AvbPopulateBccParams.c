@@ -166,7 +166,7 @@ PopulateBccParams (AvbSlotVerifyData *SlotData, BOOLEAN BootIntoRecovery,
         if (avb_strcmp (SlotData->loaded_partitions[LoadedIndex].partition_name,
                         "pvmfw") == 0 ) {
             if (SlotData->loaded_partitions[LoadedIndex].verify_result ==
-                AVB_VBMETA_VERIFY_RESULT_OK) {
+                AVB_SLOT_VERIFY_RESULT_OK) {
                 Status = PopulateBccImgParams (SlotData, bcc_params,
                                                LoadedIndex);
                 if (Status != EFI_SUCCESS) {
