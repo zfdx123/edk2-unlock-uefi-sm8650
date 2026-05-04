@@ -267,6 +267,14 @@ MaybeForceUnlockAndShutdown (
     return;
   }
 
+  Status = SetDeviceUnlockValue (UNLOCK_CRITICAL, FALSE);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR,
+            "FORCE_EL1_UNLOCK_AND_SHUTDOWN: unlock failed: %r\n",
+            Status));
+    return;
+  }
+
   DEBUG ((EFI_D_ERROR,
           "FORCE_EL1_UNLOCK_AND_SHUTDOWN: unlock succeeded, powering off\n"));
   ShutdownDevice ();
