@@ -80,4 +80,4 @@ jobs:
         with:
           name: pineapple-dualstage-artifacts-ndk
           if-no-files-found: error
-          path: out/artifacts/*
+          path: out/*
