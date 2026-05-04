@@ -145,7 +145,7 @@ VOID FortifyFail (CONST CHAR8 *Name,
   } while (0);
 
 #else
-#define FORTIFY_CHECK_P1_L1 (p1, l1)
+#define FORTIFY_CHECK_P1_L1(p1, l1)
 #endif
 
 /**
