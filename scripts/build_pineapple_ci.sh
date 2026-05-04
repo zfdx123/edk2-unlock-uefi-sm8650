@@ -29,8 +29,17 @@ export CONF_PATH="${ROOT_DIR}/Conf"
 export ROOT_DIR="${WORKSPACE}"
 export BUILD_NATIVE_AARCH64=true
 export TARGET_BUILD_VARIANT
-export CLANG35_BIN="${CLANG35_BIN:-/usr/bin/}"
-export FUSE_LD="${FUSE_LD:-/usr/bin/ld.lld}"
+# 如果在 CI 环境中，CI 会通过 env 传入 ANDROID_NDK_HOME
+if [[ -n "${ANDROID_NDK_HOME:-}" && -d "${ANDROID_NDK_HOME}" ]]; then
+  # 自动构建 NDK Clang 路径
+  NDK_LLVM_BIN="${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+  export CLANG35_BIN="${CLANG35_BIN:-$NDK_LLVM_BIN/}"
+  export FUSE_LD="${FUSE_LD:-$NDK_LLVM_BIN/ld.lld}"
+else
+  # 本地开发兜底：尝试使用系统默认或手动配置的路径
+  export CLANG35_BIN="${CLANG35_BIN:-/usr/bin/}"
+  export FUSE_LD="${FUSE_LD:-/usr/bin/ld.lld}"
+fi
 export MAKEPATH="${MAKEPATH:-/usr/bin/}"
 export ABL_SRC="."
 
