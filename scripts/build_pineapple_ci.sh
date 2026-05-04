@@ -47,7 +47,7 @@ mkdir -p "${CONF_PATH}"
 
 CLANG_MAJOR="$("${CLANG35_BIN}clang" --version | sed -n 's/.*clang version \([0-9][0-9]*\).*/\1/p' | head -n1)"
 if [[ -n "${CLANG_MAJOR}" && "${CLANG_MAJOR}" -ge 17 ]]; then
-  export CLANG_EXTRA_DLINK_FLAGS="-Wl,--no-relax -Wl,--apply-dynamic-relocs"
+  export CLANG_EXTRA_DLINK_FLAGS="-Wl,--no-relax"
 fi
 
 set +u
@@ -126,7 +126,24 @@ append_define AUTO_VIRT_ABL "${AUTO_VIRT_ABL-}"
 append_define DDR_SUPPORTS_SCT_CONFIG "${DDR_SUPPORTS_SCT_CONFIG-}"
 append_define FORCE_EL1_UNLOCK_AND_SHUTDOWN "${FORCE_EL1_UNLOCK_AND_SHUTDOWN-}"
 
-"${build_args[@]}"
+if ! "${build_args[@]}"; then
+  dual_dll="${BUILD_OUTPUT_DIR}/${BUILD_TARGET}_${TOOL_CHAIN_TAG}/${TARGET_ARCH}/QcomModulePkg/Application/DualStageLoader/DualStageLoader/${BUILD_TARGET}/DualStageLoader.dll"
+  linux_dll="${BUILD_OUTPUT_DIR}/${BUILD_TARGET}_${TOOL_CHAIN_TAG}/${TARGET_ARCH}/QcomModulePkg/Application/LinuxLoader/LinuxLoader/${BUILD_TARGET}/LinuxLoader.dll"
+
+  dump_elf_debug() {
+    local image="$1"
+    if [[ -f "${image}" ]]; then
+      echo "==== readelf sections: ${image}"
+      "${CLANG35_BIN}llvm-readelf" -SW "${image}" || true
+      echo "==== readelf relocs: ${image}"
+      "${CLANG35_BIN}llvm-readelf" -rW "${image}" || true
+    fi
+  }
+
+  dump_elf_debug "${dual_dll}"
+  dump_elf_debug "${linux_dll}"
+  exit 1
+fi
 
 BUILD_ROOT="${BUILD_OUTPUT_DIR}/${BUILD_TARGET}_${TOOL_CHAIN_TAG}"
 FV_IMAGE="${BUILD_ROOT}/FV/FVMAIN_COMPACT.Fv"
