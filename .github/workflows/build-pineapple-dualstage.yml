@@ -54,7 +54,7 @@ jobs:
         id: setup-ndk
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r24
+          ndk-version: r22b
           add-to-path: true
 
       - name: Build dual-stage pineapple artifacts (NDK Clang)
