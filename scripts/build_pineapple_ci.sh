@@ -10,6 +10,9 @@ BUILD_OUTPUT_DIR="${BUILD_OUTPUT_DIR:-${OUT_DIR}/Build}"
 BOARD_NAME="${BOARD_NAME:-pineapple}"
 BOOT_HEADER_VERSION="${BOOT_HEADER_VERSION:-4}"
 BOOT_CMDLINE="${BOOT_CMDLINE:-}"
+BOOT_IMAGE_MODE="${BOOT_IMAGE_MODE:-bootshim}"
+BOOTSHIM_UEFI_BASE="${BOOTSHIM_UEFI_BASE:-0x80200000}"
+BOOTSHIM_UEFI_SIZE="${BOOTSHIM_UEFI_SIZE:-0x0003D000}"
 BUILD_TARGET="${BUILD_TARGET:-DEBUG}"
 TOOL_CHAIN_TAG="${TOOL_CHAIN_TAG:-CLANG35}"
 TARGET_ARCH="${TARGET_ARCH:-AARCH64}"
@@ -125,7 +128,6 @@ append_define QSPA_BOOTCONFIG_ENABLE "${QSPA_BOOTCONFIG_ENABLE-}"
 append_define AUTO_VIRT_ABL "${AUTO_VIRT_ABL-}"
 append_define DDR_SUPPORTS_SCT_CONFIG "${DDR_SUPPORTS_SCT_CONFIG-}"
 append_define FORCE_EL1_UNLOCK_AND_SHUTDOWN "${FORCE_EL1_UNLOCK_AND_SHUTDOWN-}"
-
 if ! "${build_args[@]}"; then
   dual_dll="${BUILD_OUTPUT_DIR}/${BUILD_TARGET}_${TOOL_CHAIN_TAG}/${TARGET_ARCH}/QcomModulePkg/Application/DualStageLoader/DualStageLoader/${BUILD_TARGET}/DualStageLoader.dll"
   linux_dll="${BUILD_OUTPUT_DIR}/${BUILD_TARGET}_${TOOL_CHAIN_TAG}/${TARGET_ARCH}/QcomModulePkg/Application/LinuxLoader/LinuxLoader/${BUILD_TARGET}/LinuxLoader.dll"
@@ -150,6 +152,9 @@ FV_IMAGE="${BUILD_ROOT}/FV/FVMAIN_COMPACT.Fv"
 LINUX_LOADER_EFI="${BUILD_ROOT}/${TARGET_ARCH}/QcomModulePkg/Application/LinuxLoader/LinuxLoader/${BUILD_TARGET}/LinuxLoader.efi"
 DUAL_STAGE_LOADER_EFI="${BUILD_ROOT}/${TARGET_ARCH}/QcomModulePkg/Application/DualStageLoader/DualStageLoader/${BUILD_TARGET}/DualStageLoader.efi"
 UNSIGNED_ABL="${OUT_DIR}/unsigned_abl.elf"
+BOOTSHIM_BIN="${ROOT_DIR}/BootShim/BootShim.bin"
+BOOTSHIM_PREFIX="${ARTIFACT_DIR}/pineapple-dualstage-bootshim"
+BOOT_PAYLOAD_IMAGE="${FV_IMAGE}"
 
 python3 "${ROOT_DIR}/QcomModulePkg/Tools/image_header.py" \
   "${FV_IMAGE}" \
@@ -159,19 +164,69 @@ python3 "${ROOT_DIR}/QcomModulePkg/Tools/image_header.py" \
   32 \
   nohash
 
+for candidate in \
+  "${BUILD_ROOT}/FV/QcomModule_EFI.fd" \
+  "${BUILD_ROOT}/FV/QcomModule_EFI.FD" \
+  "${BUILD_ROOT}/FV/QCOMMODULE_EFI.fd" \
+  "${BUILD_ROOT}/FV/QCOMMODULE_EFI.FD"; do
+  if [[ -f "${candidate}" ]]; then
+    BOOT_PAYLOAD_IMAGE="${candidate}"
+    break
+  fi
+done
+
+if [[ "${BOOT_IMAGE_MODE}" == "bootshim" ]]; then
+  CC_BIN="${CLANG35_BIN}clang"
+  OBJCOPY_BIN="${CLANG35_BIN}llvm-objcopy"
+  if [[ ! -x "${CC_BIN}" ]]; then
+    CC_BIN="clang"
+  fi
+  if [[ ! -x "${OBJCOPY_BIN}" ]]; then
+    OBJCOPY_BIN="llvm-objcopy"
+  fi
+
+  CC="${CC_BIN}" \
+  OBJCOPY="${OBJCOPY_BIN}" \
+  "${ROOT_DIR}/build_boot_shim.sh" \
+    -b "${BOOTSHIM_UEFI_BASE}" \
+    -s "${BOOTSHIM_UEFI_SIZE}"
+
+  python3 "${ROOT_DIR}/scripts/build_bootshim_payload.py" \
+    --bootshim "${BOOTSHIM_BIN}" \
+    --payload "${BOOT_PAYLOAD_IMAGE}" \
+    --uefi-base "${BOOTSHIM_UEFI_BASE}" \
+    --uefi-size "${BOOTSHIM_UEFI_SIZE}" \
+    --output-prefix "${BOOTSHIM_PREFIX}"
+fi
+
 popd >/dev/null
 
-if [[ -f "${ROOT_DIR}/imgs/boot.img" ]]; then
-  python3 "${ROOT_DIR}/scripts/repack_stock_boot.py" \
-    --template-boot "${ROOT_DIR}/imgs/boot.img" \
-    --signature-blob "${UNSIGNED_ABL}" \
-    --output "${ARTIFACT_DIR}/pineapple-dualstage-boot.img"
+if [[ "${BOOT_IMAGE_MODE}" == "bootshim" ]]; then
+  if [[ -f "${ROOT_DIR}/imgs/8e.img" ]]; then
+    python3 "${ROOT_DIR}/scripts/repack_8e_style_boot.py" \
+      --template-8e "${ROOT_DIR}/imgs/8e.img" \
+      --kernel-gzip "${BOOTSHIM_PREFIX}.raw.bin.gz" \
+      --output "${ARTIFACT_DIR}/pineapple-dualstage-boot.img"
+  else
+    python3 "${ROOT_DIR}/scripts/pack_bootimg.py" \
+      --kernel "${BOOTSHIM_PREFIX}.raw.bin.gz" \
+      --output "${ARTIFACT_DIR}/pineapple-dualstage-boot.img" \
+      --header-version "${BOOT_HEADER_VERSION}" \
+      --cmdline "${BOOT_CMDLINE}"
+  fi
 else
-  python3 "${ROOT_DIR}/scripts/pack_bootimg.py" \
-    --kernel "${UNSIGNED_ABL}" \
-    --output "${ARTIFACT_DIR}/pineapple-dualstage-boot.img" \
-    --header-version "${BOOT_HEADER_VERSION}" \
-    --cmdline "${BOOT_CMDLINE}"
+  if [[ -f "${ROOT_DIR}/imgs/boot.img" ]]; then
+    python3 "${ROOT_DIR}/scripts/repack_stock_boot.py" \
+      --template-boot "${ROOT_DIR}/imgs/boot.img" \
+      --signature-blob "${UNSIGNED_ABL}" \
+      --output "${ARTIFACT_DIR}/pineapple-dualstage-boot.img"
+  else
+    python3 "${ROOT_DIR}/scripts/pack_bootimg.py" \
+      --kernel "${UNSIGNED_ABL}" \
+      --output "${ARTIFACT_DIR}/pineapple-dualstage-boot.img" \
+      --header-version "${BOOT_HEADER_VERSION}" \
+      --cmdline "${BOOT_CMDLINE}"
+  fi
 fi
 
 if [[ -f "${ROOT_DIR}/imgs/abl.elf" ]]; then
@@ -185,6 +240,10 @@ if [[ -f "${ROOT_DIR}/imgs/uefi.elf" ]]; then
     --input "${ROOT_DIR}/imgs/uefi.elf" \
     --output-dir "${OEM_ARTIFACT_DIR}"
 fi
+
+python3 "${ROOT_DIR}/scripts/analyze_kernel_shim_layout.py" \
+  --input "${ARTIFACT_DIR}/pineapple-dualstage-boot.img" \
+  --output-dir "${OEM_ARTIFACT_DIR}"
 
 if [[ -f "${ROOT_DIR}/imgs/8e.img" ]]; then
   python3 "${ROOT_DIR}/scripts/build_kernel_shim_payload.py" \
@@ -275,6 +334,9 @@ target_arch=${TARGET_ARCH}
 build_target=${BUILD_TARGET}
 boot_header_version=${BOOT_HEADER_VERSION}
 boot_cmdline=${BOOT_CMDLINE}
+boot_image_mode=${BOOT_IMAGE_MODE}
+bootshim_uefi_base=${BOOTSHIM_UEFI_BASE}
+bootshim_uefi_size=${BOOTSHIM_UEFI_SIZE}
 force_el1_unlock_and_shutdown=${FORCE_EL1_UNLOCK_AND_SHUTDOWN-0}
 boot_img=pineapple-dualstage-boot.img
 boot_template=imgs/boot.img
@@ -282,6 +344,7 @@ init_boot_template=imgs/init_boot.img
 primary_uefi=pineapple-stage1-linuxloader.efi
 embedded_stage2_efi=pineapple-stage2-loader.efi
 unsigned_abl=pineapple-unsigned_abl.elf
+bootshim_payload_prefix=pineapple-dualstage-bootshim
 oem_manifests_dir=oem
 analysis_dir=analysis/8e-vs-8gen3
 eight_e_style_boot_img=pineapple-8e-style-boot.img

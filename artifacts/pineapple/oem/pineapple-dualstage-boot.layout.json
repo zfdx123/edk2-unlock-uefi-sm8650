@@ -1,0 +1,29 @@
+{
+  "input": "artifacts\\pineapple\\pineapple-dualstage-boot.img",
+  "size": 36077568,
+  "header_version": 4,
+  "header_size": 1584,
+  "kernel_size": 35817984,
+  "ramdisk_size": 0,
+  "os_version_raw": 469762449,
+  "reserved": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "signature_size": 253952,
+  "kernel_offset": 4096,
+  "kernel_padded_size": 35819520,
+  "bytes_after_kernel": 253952,
+  "kernel_blob": "pineapple-dualstage-boot.kernel.bin",
+  "kernel_signatures": {
+    "elf": 17043456,
+    "fvh": null,
+    "cpio": 19908957,
+    "android": null,
+    "mz": 0,
+    "arm64_image_magic": 56
+  },
+  "gzip_unpacked": null
+}
