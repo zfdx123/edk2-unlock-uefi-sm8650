@@ -11,7 +11,9 @@ on:
       - "build_boot_shim.sh"
       - "scripts/build_bootshim_payload.py"
       - "scripts/build_bootshim_stage0.py"
+      - "scripts/build_qemu_linuxloader_force_unlock.sh"
       - "scripts/build_our_unlock_poweroff.sh"
+      - "ArmVirtPkg/**"
       - "scripts/build_pineapple_ci.sh"
       - "scripts/pack_bootimg.py"
   workflow_dispatch:
