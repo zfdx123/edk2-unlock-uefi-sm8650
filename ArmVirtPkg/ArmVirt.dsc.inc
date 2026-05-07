@@ -266,6 +266,7 @@
   #
   RVCT:*_*_*_CC_FLAGS = -DDISABLE_NEW_DEPRECATED_INTERFACES
   GCC:*_*_*_CC_FLAGS = -DDISABLE_NEW_DEPRECATED_INTERFACES -Wno-error=stringop-overflow
+  GCC:*_*_*_DLINK_FLAGS = -Wl,--no-warn-rwx-segments
 
 ################################################################################
 #
