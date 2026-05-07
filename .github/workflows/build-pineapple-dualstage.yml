@@ -4,9 +4,14 @@ on:
   push:
     paths:
       - ".github/workflows/build-pineapple-dualstage.yml"
+      - "BootShim/**"
       - "QcomModulePkg/**"
       - "docs/pineapple-dualstage-ci.md"
       - "makefile"
+      - "build_boot_shim.sh"
+      - "scripts/build_bootshim_payload.py"
+      - "scripts/build_bootshim_stage0.py"
+      - "scripts/build_our_unlock_poweroff.sh"
       - "scripts/build_pineapple_ci.sh"
       - "scripts/pack_bootimg.py"
   workflow_dispatch:
@@ -57,7 +62,7 @@ jobs:
           ndk-version: r24
           add-to-path: true
 
-      - name: Build dual-stage pineapple artifacts (NDK Clang)
+      - name: Build unlock-poweroff variants (NDK Clang)
         env:
           TARGET_REF: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.ref || github.event.inputs.target_ref || github.ref }}
           BOOT_HEADER_VERSION: ${{ github.event.inputs.boot_header_version || '4' }}
@@ -74,6 +79,26 @@ jobs:
           # 验证编译器版本
           $CC --version
           bash scripts/build_our_unlock_poweroff.sh
+
+          OUT_DIR="${GITHUB_WORKSPACE}/out/unlock-poweroff-stage0-probe" \
+          ARTIFACT_DIR="${GITHUB_WORKSPACE}/out/unlock-poweroff-stage0-probe/artifacts" \
+          BOOTSHIM_PAYLOAD_SOURCE=stage0_probe \
+          BOOTSHIM_STAGE0_MODE=reset \
+          bash scripts/build_our_unlock_poweroff.sh
+
+      - name: Summarize generated variants
+        run: |
+          cat > out/VARIANTS.txt <<'EOF'
+          Generated unlock-poweroff variants:
+          - out/unlock-poweroff/artifacts
+            payload_source=unsigned_abl
+            expected path: BootShim -> unsigned_abl ELF
+
+          - out/unlock-poweroff-stage0-probe/artifacts
+            payload_source=stage0_probe
+            stage0_mode=reset
+            expected path: BootShim -> minimal executable stage0 probe
+          EOF
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

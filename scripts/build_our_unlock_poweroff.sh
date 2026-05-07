@@ -11,12 +11,14 @@ BOOT_IMAGE_MODE="${BOOT_IMAGE_MODE:-bootshim}"
 BOOTSHIM_UEFI_BASE="${BOOTSHIM_UEFI_BASE:-0x80200000}"
 BOOTSHIM_UEFI_SIZE="${BOOTSHIM_UEFI_SIZE:-0x0003D000}"
 BOOTSHIM_PAYLOAD_SOURCE="${BOOTSHIM_PAYLOAD_SOURCE:-unsigned_abl}"
+BOOTSHIM_STAGE0_MODE="${BOOTSHIM_STAGE0_MODE:-reset}"
 
 FORCE_EL1_UNLOCK_AND_SHUTDOWN=1 \
 BOOT_IMAGE_MODE="${BOOT_IMAGE_MODE}" \
 BOOTSHIM_UEFI_BASE="${BOOTSHIM_UEFI_BASE}" \
 BOOTSHIM_UEFI_SIZE="${BOOTSHIM_UEFI_SIZE}" \
 BOOTSHIM_PAYLOAD_SOURCE="${BOOTSHIM_PAYLOAD_SOURCE}" \
+BOOTSHIM_STAGE0_MODE="${BOOTSHIM_STAGE0_MODE}" \
 OUT_DIR="${OUT_DIR}" \
 ARTIFACT_DIR="${ARTIFACT_DIR}" \
 "${ROOT_DIR}/scripts/build_pineapple_ci.sh"
@@ -38,6 +40,7 @@ EOF
   printf 'wrapped_bootshim_uefi_base=%s\n' "${BOOTSHIM_UEFI_BASE}" >> "${ARTIFACT_DIR}/manifest.txt"
   printf 'wrapped_bootshim_uefi_size=%s\n' "${BOOTSHIM_UEFI_SIZE}" >> "${ARTIFACT_DIR}/manifest.txt"
   printf 'wrapped_bootshim_payload_source=%s\n' "${BOOTSHIM_PAYLOAD_SOURCE}" >> "${ARTIFACT_DIR}/manifest.txt"
+  printf 'wrapped_bootshim_stage0_mode=%s\n' "${BOOTSHIM_STAGE0_MODE}" >> "${ARTIFACT_DIR}/manifest.txt"
 fi
 
 cat > "${ARTIFACT_DIR}/unlock-poweroff.README.md" <<'EOF'
@@ -58,6 +61,7 @@ Boot image packaging:
 - BOOTSHIM_UEFI_BASE=${BOOTSHIM_UEFI_BASE}
 - BOOTSHIM_UEFI_SIZE=${BOOTSHIM_UEFI_SIZE}
 - BOOTSHIM_PAYLOAD_SOURCE=${BOOTSHIM_PAYLOAD_SOURCE}
+- BOOTSHIM_STAGE0_MODE=${BOOTSHIM_STAGE0_MODE}
 EOF
 
 echo "${ARTIFACT_DIR}/pineapple-dualstage-unlock-poweroff-boot.img"

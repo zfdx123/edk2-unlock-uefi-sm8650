@@ -14,6 +14,7 @@ BOOT_IMAGE_MODE="${BOOT_IMAGE_MODE:-bootshim}"
 BOOTSHIM_UEFI_BASE="${BOOTSHIM_UEFI_BASE:-0x80200000}"
 BOOTSHIM_UEFI_SIZE="${BOOTSHIM_UEFI_SIZE:-0x0003D000}"
 BOOTSHIM_PAYLOAD_SOURCE="${BOOTSHIM_PAYLOAD_SOURCE:-unsigned_abl}"
+BOOTSHIM_STAGE0_MODE="${BOOTSHIM_STAGE0_MODE:-reset}"
 BUILD_TARGET="${BUILD_TARGET:-DEBUG}"
 TOOL_CHAIN_TAG="${TOOL_CHAIN_TAG:-CLANG35}"
 TARGET_ARCH="${TARGET_ARCH:-AARCH64}"
@@ -157,6 +158,7 @@ BOOTSHIM_BIN="${ROOT_DIR}/BootShim/BootShim.bin"
 BOOTSHIM_PREFIX="${ARTIFACT_DIR}/pineapple-dualstage-bootshim"
 BOOT_PAYLOAD_IMAGE="${UNSIGNED_ABL}"
 BOOTSHIM_PAYLOAD_FORMAT="elf"
+BOOTSHIM_STAGE0_ELF="${ARTIFACT_DIR}/pineapple-bootshim-stage0.elf"
 
 python3 "${ROOT_DIR}/QcomModulePkg/Tools/image_header.py" \
   "${FV_IMAGE}" \
@@ -182,6 +184,9 @@ if [[ "${BOOTSHIM_PAYLOAD_SOURCE}" == "fd" ]]; then
 elif [[ "${BOOTSHIM_PAYLOAD_SOURCE}" == "fv" ]]; then
   BOOTSHIM_PAYLOAD_FORMAT="flat"
   BOOT_PAYLOAD_IMAGE="${FV_IMAGE}"
+elif [[ "${BOOTSHIM_PAYLOAD_SOURCE}" == "stage0_probe" ]]; then
+  BOOT_PAYLOAD_IMAGE="${BOOTSHIM_STAGE0_ELF}"
+  BOOTSHIM_PAYLOAD_FORMAT="elf"
 else
   BOOT_PAYLOAD_IMAGE="${UNSIGNED_ABL}"
   BOOTSHIM_PAYLOAD_FORMAT="elf"
@@ -195,6 +200,14 @@ if [[ "${BOOT_IMAGE_MODE}" == "bootshim" ]]; then
   fi
   if [[ ! -x "${OBJCOPY_BIN}" ]]; then
     OBJCOPY_BIN="llvm-objcopy"
+  fi
+
+  if [[ "${BOOTSHIM_PAYLOAD_SOURCE}" == "stage0_probe" ]]; then
+    python3 "${ROOT_DIR}/scripts/build_bootshim_stage0.py" \
+      --output "${BOOTSHIM_STAGE0_ELF}" \
+      --link-address "${BOOTSHIM_UEFI_BASE}" \
+      --mode "${BOOTSHIM_STAGE0_MODE}" \
+      --clang-bin "${CLANG35_BIN%/}"
   fi
 
   CC="${CC_BIN}" \
@@ -351,6 +364,7 @@ boot_image_mode=${BOOT_IMAGE_MODE}
 bootshim_uefi_base=${BOOTSHIM_UEFI_BASE}
 bootshim_uefi_size=${BOOTSHIM_UEFI_SIZE}
 bootshim_payload_source=${BOOTSHIM_PAYLOAD_SOURCE}
+bootshim_stage0_mode=${BOOTSHIM_STAGE0_MODE}
 force_el1_unlock_and_shutdown=${FORCE_EL1_UNLOCK_AND_SHUTDOWN-0}
 boot_img=pineapple-dualstage-boot.img
 boot_template=imgs/boot.img
