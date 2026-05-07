@@ -54,12 +54,13 @@ jobs:
           git submodule update --init --recursive || true
           git submodule status --recursive || true
 
-          # This edk2 snapshot expects OpenSSL 1.1.1 layout. OpenSSL 3.x/master
-          # does not provide root-level e_os.h, so a shallow clone of HEAD is not
-          # a compatible fallback.
-          if [ ! -f CryptoPkg/Library/OpensslLib/openssl/e_os.h ]; then
+          # This edk2 snapshot's OpensslLib*.inf files were generated against
+          # OpenSSL 1.1.1b. Later 1.1.1 snapshots renamed many internal headers
+          # from *_lcl.h/*_locl.h to *_local.h, so HEAD or 1.1.1w will not match.
+          if [ ! -f CryptoPkg/Library/OpensslLib/openssl/e_os.h ] || \
+             [ ! -f CryptoPkg/Library/OpensslLib/openssl/crypto/hmac/hmac_lcl.h ]; then
             rm -rf CryptoPkg/Library/OpensslLib/openssl
-            git clone --depth 1 --branch OpenSSL_1_1_1w \
+            git clone --depth 1 --branch OpenSSL_1_1_1b \
               https://github.com/openssl/openssl \
               CryptoPkg/Library/OpensslLib/openssl
           fi
@@ -72,7 +73,26 @@ jobs:
           fi
 
           test -f CryptoPkg/Library/OpensslLib/openssl/e_os.h
+          test -f CryptoPkg/Library/OpensslLib/openssl/crypto/hmac/hmac_lcl.h
           test -f ArmPkg/Library/ArmSoftFloatLib/berkeley-softfloat-3/source/include/softfloat.h
+          python3 - <<'PY'
+          from pathlib import Path
+          base = Path("CryptoPkg/Library/OpensslLib")
+          missing = []
+          for inf_name in ("OpensslLib.inf", "OpensslLibCrypto.inf"):
+              for line in (base / inf_name).read_text().splitlines():
+                  line = line.strip()
+                  marker = "$(OPENSSL_PATH)/"
+                  if marker in line:
+                      rel = line.split(marker, 1)[1].split()[0]
+                      if not (base / "openssl" / rel).is_file():
+                          missing.append(f"{inf_name}: openssl/{rel}")
+          if missing:
+              print("Missing OpenSSL files referenced by INF:")
+              print("\n".join(missing))
+              raise SystemExit(1)
+          print("OpenSSL INF file references verified.")
+          PY
           git -C CryptoPkg/Library/OpensslLib/openssl rev-parse --short HEAD
 
       - name: Install build dependencies
