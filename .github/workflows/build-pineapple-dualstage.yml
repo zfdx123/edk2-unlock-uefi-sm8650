@@ -108,6 +108,7 @@ jobs:
             iasl \
             mtools \
             python3 \
+            qemu-efi-aarch64 \
             wget \
             unzip
 

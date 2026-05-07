@@ -11,6 +11,7 @@ QEMU_FD="${ARTIFACT_DIR}/QEMU_EFI.fd"
 LINUXLOADER_EFI="${ARTIFACT_DIR}/linuxloader-force-unlock.efi"
 RUN_SCRIPT="${ARTIFACT_DIR}/run-qemu-linuxloader-force-unlock.sh"
 README_PATH="${ARTIFACT_DIR}/README.md"
+QEMU_EFI_SOURCE="${QEMU_EFI_SOURCE:-system}"
 
 mkdir -p "${ARTIFACT_DIR}" "${ESP_DIR}"
 
@@ -28,26 +29,54 @@ ARTIFACT_DIR="${ARTIFACT_DIR}" \
 
 cp -f "${ARTIFACT_DIR}/pineapple-stage1-linuxloader.efi" "${LINUXLOADER_EFI}"
 
-pushd "${ROOT_DIR}" >/dev/null
-export WORKSPACE="${ROOT_DIR}"
-export PACKAGES_PATH="${ROOT_DIR}"
-export CONF_PATH="${ROOT_DIR}/Conf"
-export GCC5_AARCH64_PREFIX="${GCC5_AARCH64_PREFIX:-aarch64-linux-gnu-}"
+find_system_qemu_efi() {
+  local candidate
+  for candidate in \
+    /usr/share/AAVMF/AAVMF_CODE.fd \
+    /usr/share/qemu-efi-aarch64/QEMU_EFI.fd \
+    /usr/share/qemu/QEMU_EFI.fd; do
+    if [[ -f "${candidate}" ]]; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
 
-set +u
-. "${ROOT_DIR}/edksetup.sh"
-set -u
-make -C BaseTools
+SYSTEM_QEMU_EFI=""
+if [[ "${QEMU_EFI_SOURCE}" == "system" || "${QEMU_EFI_SOURCE}" == "auto" ]]; then
+  if SYSTEM_QEMU_EFI="$(find_system_qemu_efi)"; then
+    cp -f "${SYSTEM_QEMU_EFI}" "${QEMU_FD}"
+    QEMU_EFI_SOURCE="system:${SYSTEM_QEMU_EFI}"
+  elif [[ "${QEMU_EFI_SOURCE}" == "system" ]]; then
+    echo "error: system QEMU EFI firmware not found. Install qemu-efi-aarch64 or set QEMU_EFI_SOURCE=build." >&2
+    exit 1
+  fi
+fi
 
-build \
-  -p "${ROOT_DIR}/ArmVirtPkg/ArmVirtQemu.dsc" \
-  -a AARCH64 \
-  -t GCC5 \
-  -b DEBUG \
-  -j "${OUT_DIR}/build_armvirt_qemu.log"
-popd >/dev/null
+if [[ ! -f "${QEMU_FD}" ]]; then
+  pushd "${ROOT_DIR}" >/dev/null
+  export WORKSPACE="${ROOT_DIR}"
+  export PACKAGES_PATH="${ROOT_DIR}"
+  export CONF_PATH="${ROOT_DIR}/Conf"
+  export GCC5_AARCH64_PREFIX="${GCC5_AARCH64_PREFIX:-aarch64-linux-gnu-}"
 
-cp -f "${ROOT_DIR}/Build/ArmVirtQemu-AARCH64/DEBUG_GCC5/FV/QEMU_EFI.fd" "${QEMU_FD}"
+  set +u
+  . "${ROOT_DIR}/edksetup.sh"
+  set -u
+  make -C BaseTools
+
+  build \
+    -p "${ROOT_DIR}/ArmVirtPkg/ArmVirtQemu.dsc" \
+    -a AARCH64 \
+    -t GCC5 \
+    -b DEBUG \
+    -j "${OUT_DIR}/build_armvirt_qemu.log"
+  popd >/dev/null
+
+  cp -f "${ROOT_DIR}/Build/ArmVirtQemu-AARCH64/DEBUG_GCC5/FV/QEMU_EFI.fd" "${QEMU_FD}"
+  QEMU_EFI_SOURCE="build:ArmVirtPkg/ArmVirtQemu.dsc"
+fi
 
 mkdir -p "${ESP_DIR}/EFI/BOOT"
 cp -f "${LINUXLOADER_EFI}" "${ESP_DIR}/EFI/BOOT/BOOTAA64.EFI"
@@ -102,6 +131,7 @@ Build settings:
 - TARGET_ARCH=${TARGET_ARCH}
 - QEMU_FORCE_UNLOCK_TEST=1
 - BOOT_IMAGE_MODE=legacy
+- QEMU_EFI_SOURCE=${QEMU_EFI_SOURCE}
 EOF
 
 echo "${ARTIFACT_DIR}"
