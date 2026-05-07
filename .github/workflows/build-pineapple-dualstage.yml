@@ -49,8 +49,23 @@ jobs:
 
       - name: Sync and update submodules
         run: |
+          set -x
           git submodule sync --recursive
-          git submodule update --init --recursive
+          git submodule status --recursive || true
+          if ! git submodule update --init --recursive; then
+            echo "Submodule update failed, falling back to direct clones for required sources."
+          fi
+
+          if [ ! -f CryptoPkg/Library/OpensslLib/openssl/e_os.h ]; then
+            rm -rf CryptoPkg/Library/OpensslLib/openssl
+            git clone --depth 1 https://github.com/openssl/openssl CryptoPkg/Library/OpensslLib/openssl
+          fi
+
+          if [ ! -f ArmPkg/Library/ArmSoftFloatLib/berkeley-softfloat-3/source/include/softfloat.h ]; then
+            rm -rf ArmPkg/Library/ArmSoftFloatLib/berkeley-softfloat-3
+            git clone --depth 1 https://github.com/ucb-bar/berkeley-softfloat-3.git ArmPkg/Library/ArmSoftFloatLib/berkeley-softfloat-3
+          fi
+
           test -f CryptoPkg/Library/OpensslLib/openssl/e_os.h
 
       - name: Install build dependencies
@@ -61,6 +76,7 @@ jobs:
             gcc-aarch64-linux-gnu \
             binutils-aarch64-linux-gnu \
             dosfstools \
+            libssl-dev \
             uuid-dev \
             iasl \
             mtools \
