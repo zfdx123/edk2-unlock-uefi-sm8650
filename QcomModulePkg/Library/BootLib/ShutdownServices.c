@@ -65,6 +65,10 @@
 #include <Library/TimerLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
 
+#ifndef QEMU_FORCE_UNLOCK_TEST
+#define QEMU_FORCE_UNLOCK_TEST 0
+#endif
+
 EFI_STATUS ShutdownUefiBootServices (VOID)
 {
   EFI_STATUS Status;
@@ -207,6 +211,12 @@ VOID ShutdownDevice (VOID)
   WaitForFlashFinished ();
 
   gRT->ResetSystem (EfiResetShutdown, Status, 0, NULL);
+
+#if QEMU_FORCE_UNLOCK_TEST
+  DEBUG ((EFI_D_ERROR,
+          "QEMU_FORCE_UNLOCK_TEST: shutdown returned, trying cold reset\n"));
+  gRT->ResetSystem (EfiResetCold, EFI_SUCCESS, 0, NULL);
+#endif
 
   /* Flow never comes here and is fatal if it comes here.*/
   ASSERT (0);

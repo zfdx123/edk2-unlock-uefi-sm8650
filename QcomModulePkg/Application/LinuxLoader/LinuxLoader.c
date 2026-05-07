@@ -475,28 +475,32 @@ MaybeForceUnlockAndShutdown (
   VOID
   )
 {
-#if FORCE_EL1_UNLOCK_AND_SHUTDOWN
+#if FORCE_EL1_UNLOCK_AND_SHUTDOWN || QEMU_FORCE_UNLOCK_TEST
   EFI_STATUS Status;
+  CONST CHAR8 *ModeName;
 
-  DEBUG ((EFI_D_ERROR, "FORCE_EL1_UNLOCK_AND_SHUTDOWN: attempting unlock\n"));
+#if QEMU_FORCE_UNLOCK_TEST
+  ModeName = "QEMU_FORCE_UNLOCK_TEST";
+#else
+  ModeName = "FORCE_EL1_UNLOCK_AND_SHUTDOWN";
+#endif
+
+  DEBUG ((EFI_D_ERROR, "%a: attempting unlock\n", ModeName));
   Status = SetDeviceUnlockValue (UNLOCK, TRUE);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR,
-            "FORCE_EL1_UNLOCK_AND_SHUTDOWN: unlock failed: %r\n",
-            Status));
+            "%a: unlock failed: %r\n", ModeName, Status));
     return;
   }
 
   Status = SetDeviceUnlockValue (UNLOCK_CRITICAL, FALSE);
   if (EFI_ERROR (Status)) {
     DEBUG ((EFI_D_ERROR,
-            "FORCE_EL1_UNLOCK_AND_SHUTDOWN: unlock failed: %r\n",
-            Status));
+            "%a: unlock critical failed: %r\n", ModeName, Status));
     return;
   }
 
-  DEBUG ((EFI_D_ERROR,
-          "FORCE_EL1_UNLOCK_AND_SHUTDOWN: unlock succeeded, powering off\n"));
+  DEBUG ((EFI_D_ERROR, "%a: unlock succeeded, powering off\n", ModeName));
   ShutdownDevice ();
   CpuDeadLoop ();
 #endif
