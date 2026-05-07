@@ -4,12 +4,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${OUT_DIR:-${ROOT_DIR}/out/unlock-poweroff}"
 ARTIFACT_DIR="${ARTIFACT_DIR:-${OUT_DIR}/artifacts}"
+QEMU_TOOLS_DIR="${ARTIFACT_DIR}/qemu-tools"
+QEMU_BOOT_RUNNER="${ARTIFACT_DIR}/run-qemu-phone-boot-payload.sh"
 
-mkdir -p "${ARTIFACT_DIR}"
+mkdir -p "${ARTIFACT_DIR}" "${QEMU_TOOLS_DIR}"
 
 BOOT_IMAGE_MODE="${BOOT_IMAGE_MODE:-bootshim}"
-BOOTSHIM_UEFI_BASE="${BOOTSHIM_UEFI_BASE:-0x80200000}"
-BOOTSHIM_UEFI_SIZE="${BOOTSHIM_UEFI_SIZE:-0x0003D000}"
+BOOTSHIM_UEFI_BASE="${BOOTSHIM_UEFI_BASE:-0xA7000000}"
+BOOTSHIM_UEFI_SIZE="${BOOTSHIM_UEFI_SIZE:-0x002C3000}"
 BOOTSHIM_PAYLOAD_SOURCE="${BOOTSHIM_PAYLOAD_SOURCE:-unsigned_abl}"
 BOOTSHIM_STAGE0_MODE="${BOOTSHIM_STAGE0_MODE:-reset}"
 QEMU_FORCE_UNLOCK_TEST="${QEMU_FORCE_UNLOCK_TEST:-0}"
@@ -59,7 +61,25 @@ EOF
   printf 'wrapped_qemu_force_unlock_test=%s\n' "${QEMU_FORCE_UNLOCK_TEST}" >> "${ARTIFACT_DIR}/manifest.txt"
   printf 'wrapped_target_environment=%s\n' "${TARGET_ENVIRONMENT}" >> "${ARTIFACT_DIR}/manifest.txt"
   printf 'wrapped_target_description=%s\n' "${TARGET_DESCRIPTION}" >> "${ARTIFACT_DIR}/manifest.txt"
+  printf 'qemu_phone_boot_runner=%s\n' "$(basename "${QEMU_BOOT_RUNNER}")" >> "${ARTIFACT_DIR}/manifest.txt"
 fi
+
+cp -f "${ROOT_DIR}/scripts/analyze_kernel_shim_layout.py" \
+  "${QEMU_TOOLS_DIR}/analyze_kernel_shim_layout.py"
+cp -f "${ROOT_DIR}/scripts/run_qemu_bootimg_payload.sh" \
+  "${QEMU_TOOLS_DIR}/run_qemu_bootimg_payload.sh"
+chmod +x "${QEMU_TOOLS_DIR}/run_qemu_bootimg_payload.sh"
+
+cat > "${QEMU_BOOT_RUNNER}" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+exec "${DIR}/qemu-tools/run_qemu_bootimg_payload.sh" \
+  "${DIR}/pineapple-dualstage-unlock-poweroff-boot.img" \
+  "${DIR}/qemu-phone-boot"
+EOF
+chmod +x "${QEMU_BOOT_RUNNER}"
 
 cat > "${ARTIFACT_DIR}/unlock-poweroff.README.md" <<'EOF'
 This variant enables FORCE_EL1_UNLOCK_AND_SHUTDOWN in the local LinuxLoader build.
@@ -70,6 +90,11 @@ Behavior when the image really reaches LinuxLoader after EL1:
 
 Primary artifact:
 - pineapple-dualstage-unlock-poweroff-boot.img
+
+QEMU outer-chain smoke test:
+- run-qemu-phone-boot-payload.sh
+- This extracts the Android boot image kernel payload and runs it with QEMU.
+- It does not emulate Qualcomm XBL/ABL, AVB, storage, SMC, or phone hardware.
 EOF
 
 cat >> "${ARTIFACT_DIR}/unlock-poweroff.README.md" <<EOF

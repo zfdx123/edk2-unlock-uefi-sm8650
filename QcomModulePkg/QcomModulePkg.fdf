@@ -55,11 +55,11 @@
 
 
 [FD.QcomModule_EFI]
-BaseAddress   = 0x80200000|gEmbeddedTokenSpaceGuid.PcdEmbeddedFdBaseAddress  #The base address of the FLASH Device.
-Size          = 0x0003D000|gEmbeddedTokenSpaceGuid.PcdEmbeddedFdSize         #The size in bytes of the FLASH Device
+BaseAddress   = 0xA7000000|gEmbeddedTokenSpaceGuid.PcdEmbeddedFdBaseAddress  # Lanai-class phone UEFI_FD base
+Size          = 0x002C3000|gEmbeddedTokenSpaceGuid.PcdEmbeddedFdSize         # Align with official Lanai Core.fdf size
 ErasePolarity = 1
-BlockSize     = 0x200
-NumBlocks     = 0x1E8
+BlockSize     = 0x1000
+NumBlocks     = 0x2C3
 
 ################################################################################
 #
@@ -78,7 +78,7 @@ NumBlocks     = 0x1E8
 ################################################################################
 
 # 512 bytes of configuration header & 8 bytes of image header
-0x00000000|0x0003D000
+0x00000000|0x002C3000
 gEmbeddedTokenSpaceGuid.PcdFlashFvMainBase|gEmbeddedTokenSpaceGuid.PcdFlashFvMainSize
 FV = FVMAIN_COMPACT
 
