@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - ".github/workflows/build-pineapple-dualstage.yml"
+      - ".gitmodules"
       - "BootShim/**"
       - "QcomModulePkg/**"
       - "docs/pineapple-dualstage-ci.md"
@@ -43,6 +44,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.ref || github.event.inputs.target_ref || github.ref }}
+          submodules: recursive
 
       - name: Install build dependencies
         run: |
