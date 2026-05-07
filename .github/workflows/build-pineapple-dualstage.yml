@@ -49,8 +49,10 @@ jobs:
             build-essential \
             gcc-aarch64-linux-gnu \
             binutils-aarch64-linux-gnu \
+            dosfstools \
             uuid-dev \
             iasl \
+            mtools \
             python3 \
             wget \
             unzip
@@ -94,7 +96,22 @@ jobs:
           ARTIFACT_DIR="${GITHUB_WORKSPACE}/out/unlock-poweroff-stage0-probe/artifacts" \
           BOOTSHIM_PAYLOAD_SOURCE=stage0_probe \
           BOOTSHIM_STAGE0_MODE=reset \
+          BOOTSHIM_UEFI_BASE=0x40200000 \
           bash scripts/build_our_unlock_poweroff.sh
+
+      - name: Build qemu LinuxLoader force-unlock artifact
+        env:
+          TARGET_REF: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.ref || github.event.inputs.target_ref || github.ref }}
+          BOOT_HEADER_VERSION: ${{ github.event.inputs.boot_header_version || '4' }}
+          BOOT_CMDLINE: ${{ github.event.inputs.boot_cmdline || github.event.client_payload.boot_cmdline || '' }}
+          CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang
+          CXX: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ 
+          LD: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/ld.lld
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          OUT_DIR="${GITHUB_WORKSPACE}/out/qemu-linuxloader-force-unlock" \
+          ARTIFACT_DIR="${GITHUB_WORKSPACE}/out/qemu-linuxloader-force-unlock/artifacts" \
+          bash scripts/build_qemu_linuxloader_force_unlock.sh
 
       - name: Summarize generated variants
         run: |
@@ -107,7 +124,13 @@ jobs:
           - out/unlock-poweroff-stage0-probe/artifacts
             payload_source=stage0_probe
             stage0_mode=reset
+            bootshim_uefi_base=0x40200000
             expected path: BootShim -> minimal executable stage0 probe
+
+          - out/qemu-linuxloader-force-unlock/artifacts
+            purpose=Run LinuxLoader.efi directly under ArmVirt/QEMU
+            qemu_force_unlock_test=1
+            expected path: UEFI firmware -> LinuxLoader.efi -> fake VB -> shutdown
           EOF
 
       - name: Upload phone artifact
@@ -123,6 +146,13 @@ jobs:
           name: pineapple-unlock-poweroff-qemu-stage0-probe
           if-no-files-found: error
           path: out/unlock-poweroff-stage0-probe/*
+
+      - name: Upload qemu LinuxLoader artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pineapple-qemu-linuxloader-force-unlock
+          if-no-files-found: error
+          path: out/qemu-linuxloader-force-unlock/*
 
       - name: Upload combined artifacts
         uses: actions/upload-artifact@v4
