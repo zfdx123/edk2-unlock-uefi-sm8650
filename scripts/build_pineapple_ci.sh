@@ -130,6 +130,7 @@ append_define QSPA_BOOTCONFIG_ENABLE "${QSPA_BOOTCONFIG_ENABLE-}"
 append_define AUTO_VIRT_ABL "${AUTO_VIRT_ABL-}"
 append_define DDR_SUPPORTS_SCT_CONFIG "${DDR_SUPPORTS_SCT_CONFIG-}"
 append_define FORCE_EL1_UNLOCK_AND_SHUTDOWN "${FORCE_EL1_UNLOCK_AND_SHUTDOWN-}"
+append_define QEMU_FORCE_UNLOCK_TEST "${QEMU_FORCE_UNLOCK_TEST-}"
 if ! "${build_args[@]}"; then
   dual_dll="${BUILD_OUTPUT_DIR}/${BUILD_TARGET}_${TOOL_CHAIN_TAG}/${TARGET_ARCH}/QcomModulePkg/Application/DualStageLoader/DualStageLoader/${BUILD_TARGET}/DualStageLoader.dll"
   linux_dll="${BUILD_OUTPUT_DIR}/${BUILD_TARGET}_${TOOL_CHAIN_TAG}/${TARGET_ARCH}/QcomModulePkg/Application/LinuxLoader/LinuxLoader/${BUILD_TARGET}/LinuxLoader.dll"

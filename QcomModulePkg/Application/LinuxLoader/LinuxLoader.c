@@ -82,6 +82,7 @@
 #include "Library/ThreadStack.h"
 #include <Library/HypervisorMvCalls.h>
 #include <Library/UpdateCmdLine.h>
+#include <Protocol/EFIVerifiedBoot.h>
 #include <Protocol/EFICardInfo.h>
 #include <Protocol/GraphicsOutput.h>
 
@@ -104,6 +105,10 @@
 #define FORCE_EL1_UNLOCK_AND_SHUTDOWN 0
 #endif
 
+#ifndef QEMU_FORCE_UNLOCK_TEST
+#define QEMU_FORCE_UNLOCK_TEST 0
+#endif
+
 #if HIBERNATION_SUPPORT_NO_AES
 VOID BootIntoHibernationImage (BootInfo *Info,
                                BOOLEAN *SetRotAndBootStateAndVBH);
@@ -117,6 +122,221 @@ UINT64 FlashlessBootImageAddr = 0;
 STATIC DeviceInfo DevInfo;
 STATIC UINT32 BootDeviceType = EFI_MAX_FLASH_TYPE;
 STATIC CONST EFI_GUID mDualStageLoaderFileGuid = DUAL_STAGE_LOADER_FILE_GUID;
+
+#if QEMU_FORCE_UNLOCK_TEST
+STATIC EFI_HANDLE mFakeVerifiedBootHandle = NULL;
+STATIC UINT8 mFakeVerifiedBootState[4096];
+STATIC UINT32 mFakeVerifiedBootStateSize = 0;
+
+STATIC
+EFI_STATUS
+EFIAPI
+FakeVbRwDeviceState (
+  IN QCOM_VERIFIEDBOOT_PROTOCOL  *This,
+  IN vb_device_state_op_t        Op,
+  IN OUT UINT8                   *Buf,
+  IN UINT32                      BufLen
+  )
+{
+  UINT32 CopyLen;
+
+  if (Buf == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  CopyLen = BufLen;
+  if (CopyLen > sizeof (mFakeVerifiedBootState)) {
+    CopyLen = sizeof (mFakeVerifiedBootState);
+  }
+
+  if (Op == READ_CONFIG) {
+    gBS->SetMem (Buf, BufLen, 0);
+    if (mFakeVerifiedBootStateSize > 0) {
+      if (CopyLen > mFakeVerifiedBootStateSize) {
+        CopyLen = mFakeVerifiedBootStateSize;
+      }
+      gBS->CopyMem (Buf, mFakeVerifiedBootState, CopyLen);
+    }
+    return EFI_SUCCESS;
+  }
+
+  if (Op == WRITE_CONFIG) {
+    gBS->SetMem (mFakeVerifiedBootState, sizeof (mFakeVerifiedBootState), 0);
+    gBS->CopyMem (mFakeVerifiedBootState, Buf, CopyLen);
+    mFakeVerifiedBootStateSize = CopyLen;
+    return EFI_SUCCESS;
+  }
+
+  return EFI_UNSUPPORTED;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FakeVbDeviceInit (
+  IN QCOM_VERIFIEDBOOT_PROTOCOL  *This,
+  IN device_info_vb_t            *DevInfoVb
+  )
+{
+  if (DevInfoVb == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  DevInfoVb->is_unlocked = TRUE;
+  DevInfoVb->is_unlock_critical = TRUE;
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FakeVbSendRot (
+  IN QCOM_VERIFIEDBOOT_PROTOCOL  *This
+  )
+{
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FakeVbSendMilestone (
+  IN QCOM_VERIFIEDBOOT_PROTOCOL  *This
+  )
+{
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FakeVbVerifyImage (
+  IN QCOM_VERIFIEDBOOT_PROTOCOL  *This,
+  IN UINT8                       Pname[MAX_PNAME_LENGTH],
+  IN UINT8                       *Img,
+  IN UINT32                      ImgLen,
+  OUT boot_state_t               *BootState
+  )
+{
+  if (BootState != NULL) {
+    *BootState = ORANGE;
+  }
+  return EFI_UNSUPPORTED;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FakeVbDeviceResetState (
+  IN QCOM_VERIFIEDBOOT_PROTOCOL  *This
+  )
+{
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FakeVbIsDeviceSecure (
+  IN QCOM_VERIFIEDBOOT_PROTOCOL  *This,
+  OUT BOOLEAN                    *State
+  )
+{
+  if (State == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *State = FALSE;
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FakeVbGetBootState (
+  IN QCOM_VERIFIEDBOOT_PROTOCOL  *This,
+  OUT boot_state_t               *BootState
+  )
+{
+  if (BootState == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *BootState = ORANGE;
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FakeVbGetCertFingerPrint (
+  IN QCOM_VERIFIEDBOOT_PROTOCOL  *This,
+  OUT UINT8                      *FingerPrint,
+  IN UINTN                       FingerPrintLen,
+  OUT UINTN                      *OutLen
+  )
+{
+  if (OutLen == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *OutLen = 0;
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+EFIAPI
+FakeVbIsKeymasterEnabled (
+  IN  QCOM_VERIFIEDBOOT_PROTOCOL  *This,
+  OUT BOOLEAN                     *KeymasterEnabled
+  )
+{
+  if (KeymasterEnabled == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *KeymasterEnabled = FALSE;
+  return EFI_SUCCESS;
+}
+
+STATIC QCOM_VERIFIEDBOOT_PROTOCOL mFakeVerifiedBootProtocol = {
+  QCOM_VERIFIEDBOOT_PROTOCOL_REVISION,
+  FakeVbRwDeviceState,
+  FakeVbDeviceInit,
+  FakeVbSendRot,
+  FakeVbSendMilestone,
+  FakeVbVerifyImage,
+  FakeVbDeviceResetState,
+  FakeVbIsDeviceSecure,
+  FakeVbGetBootState,
+  FakeVbGetCertFingerPrint,
+  FakeVbIsKeymasterEnabled
+};
+
+STATIC
+EFI_STATUS
+InstallFakeVerifiedBootProtocol (
+  VOID
+  )
+{
+  EFI_STATUS                   Status;
+  QCOM_VERIFIEDBOOT_PROTOCOL   *Existing = NULL;
+
+  Status = gBS->LocateProtocol (&gEfiQcomVerifiedBootProtocolGuid, NULL,
+                                (VOID **)&Existing);
+  if (!EFI_ERROR (Status) && Existing != NULL) {
+    return EFI_SUCCESS;
+  }
+
+  return gBS->InstallMultipleProtocolInterfaces (
+                &mFakeVerifiedBootHandle,
+                &gEfiQcomVerifiedBootProtocolGuid,
+                &mFakeVerifiedBootProtocol,
+                NULL
+                );
+}
+#endif
 
 STATIC
 VOID
@@ -546,6 +766,27 @@ LinuxLoaderEntry (IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable)
   ProbeRebootIf (1, "LinuxLoaderEntry");
 
   BootStatsSetTimeStamp (BS_BL_START);
+
+#if QEMU_FORCE_UNLOCK_TEST
+  Status = InstallFakeVerifiedBootProtocol ();
+  if (EFI_ERROR (Status)) {
+    DEBUG ((EFI_D_ERROR, "Failed to install fake VerifiedBoot protocol: %r\n",
+            Status));
+    goto stack_guard_update_default;
+  }
+
+  Status = DeviceInfoInit ();
+  if (Status != EFI_SUCCESS) {
+    DEBUG ((EFI_D_ERROR, "Initialize the device info failed: %r\n", Status));
+    goto stack_guard_update_default;
+  }
+
+  MaybeForceUnlockAndShutdown ();
+  DEBUG ((EFI_D_ERROR,
+          "QEMU_FORCE_UNLOCK_TEST returned from MaybeForceUnlockAndShutdown unexpectedly\n"));
+  Status = EFI_ABORTED;
+  goto stack_guard_update_default;
+#endif
 
   /* Check if memory card is present; goto flashless if not */
   Status = gBS->LocateProtocol (&gEfiMemCardInfoProtocolGuid, NULL,

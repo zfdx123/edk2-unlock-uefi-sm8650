@@ -62,7 +62,7 @@ jobs:
           ndk-version: r24
           add-to-path: true
 
-      - name: Build unlock-poweroff variants (NDK Clang)
+      - name: Build phone unlock-poweroff artifact (NDK Clang)
         env:
           TARGET_REF: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.ref || github.event.inputs.target_ref || github.ref }}
           BOOT_HEADER_VERSION: ${{ github.event.inputs.boot_header_version || '4' }}
@@ -80,6 +80,16 @@ jobs:
           $CC --version
           bash scripts/build_our_unlock_poweroff.sh
 
+      - name: Build qemu stage0-probe artifact (NDK Clang)
+        env:
+          TARGET_REF: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.ref || github.event.inputs.target_ref || github.ref }}
+          BOOT_HEADER_VERSION: ${{ github.event.inputs.boot_header_version || '4' }}
+          BOOT_CMDLINE: ${{ github.event.inputs.boot_cmdline || github.event.client_payload.boot_cmdline || '' }}
+          CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang
+          CXX: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ 
+          LD: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/ld.lld
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
           OUT_DIR="${GITHUB_WORKSPACE}/out/unlock-poweroff-stage0-probe" \
           ARTIFACT_DIR="${GITHUB_WORKSPACE}/out/unlock-poweroff-stage0-probe/artifacts" \
           BOOTSHIM_PAYLOAD_SOURCE=stage0_probe \
@@ -100,7 +110,21 @@ jobs:
             expected path: BootShim -> minimal executable stage0 probe
           EOF
 
-      - name: Upload artifacts
+      - name: Upload phone artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pineapple-unlock-poweroff-phone
+          if-no-files-found: error
+          path: out/unlock-poweroff/*
+
+      - name: Upload qemu stage0 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pineapple-unlock-poweroff-qemu-stage0-probe
+          if-no-files-found: error
+          path: out/unlock-poweroff-stage0-probe/*
+
+      - name: Upload combined artifacts
         uses: actions/upload-artifact@v4
         with:
           name: pineapple-dualstage-artifacts-ndk

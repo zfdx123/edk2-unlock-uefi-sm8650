@@ -12,6 +12,20 @@ BOOTSHIM_UEFI_BASE="${BOOTSHIM_UEFI_BASE:-0x80200000}"
 BOOTSHIM_UEFI_SIZE="${BOOTSHIM_UEFI_SIZE:-0x0003D000}"
 BOOTSHIM_PAYLOAD_SOURCE="${BOOTSHIM_PAYLOAD_SOURCE:-unsigned_abl}"
 BOOTSHIM_STAGE0_MODE="${BOOTSHIM_STAGE0_MODE:-reset}"
+QEMU_FORCE_UNLOCK_TEST="${QEMU_FORCE_UNLOCK_TEST:-0}"
+
+TARGET_ENVIRONMENT="experimental"
+TARGET_DESCRIPTION="Experimental payload source; validate carefully before using on hardware."
+if [[ "${BOOTSHIM_PAYLOAD_SOURCE}" == "unsigned_abl" && "${QEMU_FORCE_UNLOCK_TEST}" == "0" ]]; then
+  TARGET_ENVIRONMENT="phone"
+  TARGET_DESCRIPTION="Real-device candidate: BootShim -> unsigned_abl path with real unlock-and-shutdown logic."
+elif [[ "${BOOTSHIM_PAYLOAD_SOURCE}" == "stage0_probe" ]]; then
+  TARGET_ENVIRONMENT="qemu"
+  TARGET_DESCRIPTION="QEMU smoke-test only: BootShim -> executable stage0 probe."
+elif [[ "${QEMU_FORCE_UNLOCK_TEST}" != "0" ]]; then
+  TARGET_ENVIRONMENT="qemu"
+  TARGET_DESCRIPTION="QEMU-oriented LinuxLoader test path with fake VerifiedBoot protocol."
+fi
 
 FORCE_EL1_UNLOCK_AND_SHUTDOWN=1 \
 BOOT_IMAGE_MODE="${BOOT_IMAGE_MODE}" \
@@ -19,6 +33,7 @@ BOOTSHIM_UEFI_BASE="${BOOTSHIM_UEFI_BASE}" \
 BOOTSHIM_UEFI_SIZE="${BOOTSHIM_UEFI_SIZE}" \
 BOOTSHIM_PAYLOAD_SOURCE="${BOOTSHIM_PAYLOAD_SOURCE}" \
 BOOTSHIM_STAGE0_MODE="${BOOTSHIM_STAGE0_MODE}" \
+QEMU_FORCE_UNLOCK_TEST="${QEMU_FORCE_UNLOCK_TEST}" \
 OUT_DIR="${OUT_DIR}" \
 ARTIFACT_DIR="${ARTIFACT_DIR}" \
 "${ROOT_DIR}/scripts/build_pineapple_ci.sh"
@@ -41,6 +56,9 @@ EOF
   printf 'wrapped_bootshim_uefi_size=%s\n' "${BOOTSHIM_UEFI_SIZE}" >> "${ARTIFACT_DIR}/manifest.txt"
   printf 'wrapped_bootshim_payload_source=%s\n' "${BOOTSHIM_PAYLOAD_SOURCE}" >> "${ARTIFACT_DIR}/manifest.txt"
   printf 'wrapped_bootshim_stage0_mode=%s\n' "${BOOTSHIM_STAGE0_MODE}" >> "${ARTIFACT_DIR}/manifest.txt"
+  printf 'wrapped_qemu_force_unlock_test=%s\n' "${QEMU_FORCE_UNLOCK_TEST}" >> "${ARTIFACT_DIR}/manifest.txt"
+  printf 'wrapped_target_environment=%s\n' "${TARGET_ENVIRONMENT}" >> "${ARTIFACT_DIR}/manifest.txt"
+  printf 'wrapped_target_description=%s\n' "${TARGET_DESCRIPTION}" >> "${ARTIFACT_DIR}/manifest.txt"
 fi
 
 cat > "${ARTIFACT_DIR}/unlock-poweroff.README.md" <<'EOF'
@@ -56,12 +74,17 @@ EOF
 
 cat >> "${ARTIFACT_DIR}/unlock-poweroff.README.md" <<EOF
 
+Target environment:
+- ${TARGET_ENVIRONMENT}
+- ${TARGET_DESCRIPTION}
+
 Boot image packaging:
 - BOOT_IMAGE_MODE=${BOOT_IMAGE_MODE}
 - BOOTSHIM_UEFI_BASE=${BOOTSHIM_UEFI_BASE}
 - BOOTSHIM_UEFI_SIZE=${BOOTSHIM_UEFI_SIZE}
 - BOOTSHIM_PAYLOAD_SOURCE=${BOOTSHIM_PAYLOAD_SOURCE}
 - BOOTSHIM_STAGE0_MODE=${BOOTSHIM_STAGE0_MODE}
+- QEMU_FORCE_UNLOCK_TEST=${QEMU_FORCE_UNLOCK_TEST}
 EOF
 
 echo "${ARTIFACT_DIR}/pineapple-dualstage-unlock-poweroff-boot.img"

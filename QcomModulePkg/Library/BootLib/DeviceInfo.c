@@ -42,6 +42,10 @@
 #include <Library/Recovery.h>
 #include <Library/StackCanary.h>
 
+#ifndef QEMU_FORCE_UNLOCK_TEST
+#define QEMU_FORCE_UNLOCK_TEST 0
+#endif
+
 #define GOLDEN_SNAPSHOT_MAGIC 0x575757
 
 STATIC DeviceInfo DevInfo;
@@ -266,6 +270,10 @@ SetDeviceUnlockValue (UINT32 Type, BOOLEAN State)
   }
   if (Status != EFI_SUCCESS)
     return Status;
+
+#if QEMU_FORCE_UNLOCK_TEST
+  return EFI_SUCCESS;
+#endif
 
   Status = ResetDeviceState ();
   if (Status != EFI_SUCCESS) {
