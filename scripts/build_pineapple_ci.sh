@@ -13,6 +13,7 @@ BOOT_CMDLINE="${BOOT_CMDLINE:-}"
 BOOT_IMAGE_MODE="${BOOT_IMAGE_MODE:-bootshim}"
 BOOTSHIM_UEFI_BASE="${BOOTSHIM_UEFI_BASE:-0x80200000}"
 BOOTSHIM_UEFI_SIZE="${BOOTSHIM_UEFI_SIZE:-0x0003D000}"
+BOOTSHIM_PAYLOAD_SOURCE="${BOOTSHIM_PAYLOAD_SOURCE:-unsigned_abl}"
 BUILD_TARGET="${BUILD_TARGET:-DEBUG}"
 TOOL_CHAIN_TAG="${TOOL_CHAIN_TAG:-CLANG35}"
 TARGET_ARCH="${TARGET_ARCH:-AARCH64}"
@@ -154,7 +155,8 @@ DUAL_STAGE_LOADER_EFI="${BUILD_ROOT}/${TARGET_ARCH}/QcomModulePkg/Application/Du
 UNSIGNED_ABL="${OUT_DIR}/unsigned_abl.elf"
 BOOTSHIM_BIN="${ROOT_DIR}/BootShim/BootShim.bin"
 BOOTSHIM_PREFIX="${ARTIFACT_DIR}/pineapple-dualstage-bootshim"
-BOOT_PAYLOAD_IMAGE="${FV_IMAGE}"
+BOOT_PAYLOAD_IMAGE="${UNSIGNED_ABL}"
+BOOTSHIM_PAYLOAD_FORMAT="elf"
 
 python3 "${ROOT_DIR}/QcomModulePkg/Tools/image_header.py" \
   "${FV_IMAGE}" \
@@ -164,16 +166,26 @@ python3 "${ROOT_DIR}/QcomModulePkg/Tools/image_header.py" \
   32 \
   nohash
 
-for candidate in \
-  "${BUILD_ROOT}/FV/QcomModule_EFI.fd" \
-  "${BUILD_ROOT}/FV/QcomModule_EFI.FD" \
-  "${BUILD_ROOT}/FV/QCOMMODULE_EFI.fd" \
-  "${BUILD_ROOT}/FV/QCOMMODULE_EFI.FD"; do
-  if [[ -f "${candidate}" ]]; then
-    BOOT_PAYLOAD_IMAGE="${candidate}"
-    break
-  fi
-done
+if [[ "${BOOTSHIM_PAYLOAD_SOURCE}" == "fd" ]]; then
+  BOOTSHIM_PAYLOAD_FORMAT="flat"
+  BOOT_PAYLOAD_IMAGE="${FV_IMAGE}"
+  for candidate in \
+    "${BUILD_ROOT}/FV/QcomModule_EFI.fd" \
+    "${BUILD_ROOT}/FV/QcomModule_EFI.FD" \
+    "${BUILD_ROOT}/FV/QCOMMODULE_EFI.fd" \
+    "${BUILD_ROOT}/FV/QCOMMODULE_EFI.FD"; do
+    if [[ -f "${candidate}" ]]; then
+      BOOT_PAYLOAD_IMAGE="${candidate}"
+      break
+    fi
+  done
+elif [[ "${BOOTSHIM_PAYLOAD_SOURCE}" == "fv" ]]; then
+  BOOTSHIM_PAYLOAD_FORMAT="flat"
+  BOOT_PAYLOAD_IMAGE="${FV_IMAGE}"
+else
+  BOOT_PAYLOAD_IMAGE="${UNSIGNED_ABL}"
+  BOOTSHIM_PAYLOAD_FORMAT="elf"
+fi
 
 if [[ "${BOOT_IMAGE_MODE}" == "bootshim" ]]; then
   CC_BIN="${CLANG35_BIN}clang"
@@ -196,6 +208,7 @@ if [[ "${BOOT_IMAGE_MODE}" == "bootshim" ]]; then
     --payload "${BOOT_PAYLOAD_IMAGE}" \
     --uefi-base "${BOOTSHIM_UEFI_BASE}" \
     --uefi-size "${BOOTSHIM_UEFI_SIZE}" \
+    --payload-format "${BOOTSHIM_PAYLOAD_FORMAT}" \
     --output-prefix "${BOOTSHIM_PREFIX}"
 fi
 
@@ -337,6 +350,7 @@ boot_cmdline=${BOOT_CMDLINE}
 boot_image_mode=${BOOT_IMAGE_MODE}
 bootshim_uefi_base=${BOOTSHIM_UEFI_BASE}
 bootshim_uefi_size=${BOOTSHIM_UEFI_SIZE}
+bootshim_payload_source=${BOOTSHIM_PAYLOAD_SOURCE}
 force_el1_unlock_and_shutdown=${FORCE_EL1_UNLOCK_AND_SHUTDOWN-0}
 boot_img=pineapple-dualstage-boot.img
 boot_template=imgs/boot.img

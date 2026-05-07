@@ -15,6 +15,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--payload", required=True, help="Flat payload image path")
     parser.add_argument("--uefi-base", required=True, help="UEFI load address")
     parser.add_argument("--uefi-size", required=True, help="UEFI image size")
+    parser.add_argument(
+        "--payload-format",
+        choices=("auto", "flat", "elf"),
+        default="auto",
+        help="How BootShim should treat the payload",
+    )
     parser.add_argument("--output-prefix", required=True, help="Output prefix without extension")
     return parser.parse_args()
 
@@ -30,18 +36,29 @@ def main() -> int:
     payload = payload_path.read_bytes()
     uefi_base = parse_int(args.uefi_base)
     uefi_size = parse_int(args.uefi_size)
+    is_elf = payload[:4] == b"\x7fELF"
 
-    if uefi_size <= 0:
-        raise ValueError("uefi size must be positive")
-    if uefi_size % 16 != 0:
-        raise ValueError("uefi size must be 16-byte aligned for BootShim copy loop")
-    if len(payload) > uefi_size:
-        raise ValueError(
-            f"payload {payload_path} is too large ({len(payload)} bytes > configured {uefi_size} bytes)"
-        )
+    payload_format = args.payload_format
+    if payload_format == "auto":
+        payload_format = "elf" if is_elf else "flat"
 
-    padded_payload = payload + (b"\0" * (uefi_size - len(payload)))
-    raw = bootshim + padded_payload
+    if payload_format == "elf" and not is_elf:
+        raise ValueError(f"payload {payload_path} does not start with ELF magic")
+
+    if payload_format == "flat":
+        if uefi_size <= 0:
+            raise ValueError("uefi size must be positive")
+        if uefi_size % 16 != 0:
+            raise ValueError("uefi size must be 16-byte aligned for BootShim copy loop")
+        if len(payload) > uefi_size:
+            raise ValueError(
+                f"payload {payload_path} is too large ({len(payload)} bytes > configured {uefi_size} bytes)"
+            )
+        payload_bytes = payload + (b"\0" * (uefi_size - len(payload)))
+    else:
+        payload_bytes = payload
+
+    raw = bootshim + payload_bytes
 
     output_prefix = pathlib.Path(args.output_prefix)
     output_prefix.parent.mkdir(parents=True, exist_ok=True)
@@ -56,8 +73,9 @@ def main() -> int:
             {
                 "bootshim": str(pathlib.Path(args.bootshim)),
                 "payload": str(payload_path),
+                "payload_format": payload_format,
                 "payload_input_size": len(payload),
-                "payload_padded_size": len(padded_payload),
+                "payload_padded_size": len(payload_bytes),
                 "raw_size": len(raw),
                 "gzip_size": gzip_path.stat().st_size,
                 "uefi_base": hex(uefi_base),
